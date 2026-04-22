@@ -32,7 +32,7 @@ export default function OnboardingPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user?.id) return;
-        
+
         setLoading(true);
         setError(null);
 
@@ -95,19 +95,19 @@ export default function OnboardingPage() {
                                         {bloodGroups.map((bg) => {
                                             const isSelected = formData.blood_group === bg;
                                             return (
-                                            <button
-                                                key={bg}
-                                                type="button"
-                                                onClick={() => setFormData({ ...formData, blood_group: bg })}
-                                                className={`py-4 rounded-xl font-bold font-mono text-lg transition-all border-2 ${
-                                                    isSelected
-                                                    ? 'border-crimson bg-rose-500/5 text-crimson scale-[1.02] shadow-sm'
-                                                    : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700'
-                                                }`}
-                                            >
-                                                {bg}
-                                            </button>
-                                        )})}
+                                                <button
+                                                    key={bg}
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, blood_group: bg })}
+                                                    className={`py-4 rounded-xl font-bold font-mono text-lg transition-all border-2 ${isSelected
+                                                            ? 'border-crimson bg-rose-500/5 text-crimson scale-[1.02] shadow-sm'
+                                                            : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700'
+                                                        }`}
+                                                >
+                                                    {bg}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
                                 </div>
 
@@ -155,18 +155,16 @@ export default function OnboardingPage() {
                                 </div>
 
                                 {/* Donor Availability Toggle */}
-                                <div 
-                                    className={`p-6 rounded-2xl border-2 cursor-pointer transition-all ${
-                                        formData.is_available_donor 
-                                        ? 'border-emerald-500/20 bg-emerald-500/5' 
-                                        : 'border-zinc-200 dark:border-zinc-800 bg-transparent'
-                                    }`}
+                                <div
+                                    className={`p-6 rounded-2xl border-2 cursor-pointer transition-all ${formData.is_available_donor
+                                            ? 'border-emerald-500/20 bg-emerald-500/5'
+                                            : 'border-zinc-200 dark:border-zinc-800 bg-transparent'
+                                        }`}
                                     onClick={() => setFormData({ ...formData, is_available_donor: !formData.is_available_donor })}
                                 >
                                     <div className="flex items-center gap-5">
-                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors shrink-0 ${
-                                            formData.is_available_donor ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
-                                        }`}>
+                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors shrink-0 ${formData.is_available_donor ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400'
+                                            }`}>
                                             <Heart className="w-6 h-6 fill-current" />
                                         </div>
                                         <div className="flex-1">
