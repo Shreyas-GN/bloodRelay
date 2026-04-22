@@ -11,10 +11,7 @@ services:
           name: pulse-aid-db
           property: connectionString
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: pulse-aid-redis
-          property: connectionString
+        sync: false # You will paste the Upstash URL here
       - key: ALLOWED_HOSTS
         value: "*"
       - key: DEBUG
@@ -22,12 +19,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
 
-  # Redis for Channels
-  - type: redis
-    name: pulse-aid-redis
-    ipAllowList: [] # Only allow internal connections
-
 databases:
   - name: pulse-aid-db
     user: pulse_aid_user
-    plan: free # Change to starter for production
+    plan: free
