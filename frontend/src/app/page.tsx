@@ -267,99 +267,37 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Trust Strip ───────────────────────────────────── */}
-        <section className="border-t border-zinc-200/60 bg-white">
-          <div className="max-w-5xl mx-auto px-6 py-8">
-            <motion.div
-              variants={fade} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className="flex flex-wrap items-center gap-x-8 gap-y-3 text-sm font-semibold text-zinc-500"
-            >
-              {[
-                { icon: MapPin, text: "Bangalore-based, expanding" },
-                { icon: Github, text: "Open source", href: "https://github.com/Shreyas-GN/Pulse-Aid" },
-                { icon: Shield, text: "Free forever · No ads · No upsell" },
-              ].map((item) => {
-                const Icon = item.icon;
-                const inner = (
-                  <span className="flex items-center gap-2 hover:text-zinc-900 transition-colors">
-                    <Icon className="w-4 h-4" />
-                    {item.text}
-                  </span>
-                );
-                return item.href ? (
-                  <a key={item.text} href={item.href} target="_blank" rel="noopener noreferrer">{inner}</a>
-                ) : (
-                  <span key={item.text}>{inner}</span>
-                );
-              })}
-            </motion.div>
-          </div>
-        </section>
-
-        {/* ── Final CTA ─────────────────────────────────────── */}
-        <section className="border-t border-zinc-200/60 bg-zinc-50">
-          <div className="max-w-5xl mx-auto px-6 py-20">
-            <motion.div
-              variants={fade} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8"
-            >
-              <div className="space-y-2">
-                <h2 className="text-3xl font-extrabold tracking-tighter text-zinc-900">
-                  Someone near you might need blood tomorrow.
-                </h2>
-                <p className="text-zinc-500 font-medium text-base max-w-md">
-                  Sign up as a donor. We'll only contact you when someone nearby genuinely needs your blood type.
-                </p>
-              </div>
-              <SignedOut>
-                <div className="flex flex-col sm:flex-row gap-3 shrink-0">
-                  <Link
-                    href="/sign-up"
-                    className="inline-flex items-center gap-2 px-6 py-3.5 bg-zinc-900 text-white font-bold rounded-xl hover:bg-zinc-700 transition-colors whitespace-nowrap"
-                  >
-                    Sign up as donor
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                  <Link
-                    href="/request/wizard"
-                    className="inline-flex items-center gap-2 px-6 py-3.5 bg-crimson text-white font-bold rounded-xl hover:bg-red-700 transition-colors whitespace-nowrap shadow-[0_4px_16px_rgba(192,57,43,0.25)]"
-                  >
-                    <AlertCircle className="w-4 h-4" />
-                    I need blood now
-                  </Link>
-                </div>
-              </SignedOut>
-              <SignedIn>
-                <Link
-                  href="/dashboard"
-                  className="inline-flex items-center gap-2 px-6 py-3.5 bg-zinc-900 text-white font-bold rounded-xl hover:bg-zinc-700 transition-colors"
-                >
-                  Open Dashboard
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </SignedIn>
-            </motion.div>
-          </div>
-        </section>
-
-      </main>
-
       {/* ── Footer ─────────────────────────────────────────── */}
-      <footer className="border-t border-zinc-200/60 py-6">
-        <div className="max-w-5xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-zinc-400 font-medium">
-          <span>PulseAid · 2026 · Built in Bangalore</span>
-          <div className="flex items-center gap-4">
-            <a
-              href="https://github.com/Shreyas-GN/Pulse-Aid"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 hover:text-zinc-700 transition-colors"
-            >
-              <Github className="w-3.5 h-3.5" />
-              Open source
-            </a>
-            <span>·</span>
-            <span>Free forever</span>
+      <footer className="border-t border-zinc-200/60 bg-white py-12">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8 pb-8 border-b border-zinc-100">
+            <div className="flex items-center gap-2">
+              <Droplet className="w-4 h-4 fill-crimson stroke-crimson" />
+              <span className="text-sm font-bold tracking-tight">PulseAid</span>
+            </div>
+            
+            <div className="flex flex-wrap justify-center items-center gap-x-8 gap-y-3 text-sm font-semibold text-zinc-500">
+              <span className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Bangalore-based
+              </span>
+              <a href="https://github.com/Shreyas-GN/Pulse-Aid" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-zinc-900 transition-colors">
+                <Github className="w-4 h-4" />
+                Open source
+              </a>
+              <span className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Free forever · No ads
+              </span>
+            </div>
+          </div>
+          
+          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] font-bold text-zinc-400 uppercase tracking-widest">
+            <span>© 2026 PulseAid</span>
+            <div className="flex items-center gap-4">
+              <Link href="/privacy" className="hover:text-zinc-600 transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-zinc-600 transition-colors">Terms</Link>
+            </div>
           </div>
         </div>
       </footer>
