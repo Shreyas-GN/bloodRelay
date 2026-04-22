@@ -119,6 +119,8 @@ export default function RequestWizardPage() {
                 blood_group: formData.blood_group,
                 units: formData.units,
                 urgency_level: formData.urgency_level,
+                note: formData.note,
+                requester_relation: formData.requester_relation,
                 location: gpsLocation ? `POINT(${gpsLocation.lng} ${gpsLocation.lat})` : 'POINT(0 0)', 
             });
             router.push('/dashboard');

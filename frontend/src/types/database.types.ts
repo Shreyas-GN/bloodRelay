@@ -57,6 +57,8 @@ export interface Database {
           created_at: string
           donor_name: string | null
           donor_phone: string | null
+          note: string | null
+          requester_relation: string | null
         }
         Insert: {
           id?: string
@@ -73,6 +75,8 @@ export interface Database {
           created_at?: string
           donor_name?: string | null
           donor_phone?: string | null
+          note?: string | null
+          requester_relation?: string | null
         }
         Update: {
           id?: string
@@ -89,6 +93,8 @@ export interface Database {
           created_at?: string
           donor_name?: string | null
           donor_phone?: string | null
+          note?: string | null
+          requester_relation?: string | null
         }
       }
       donor_responses: {
