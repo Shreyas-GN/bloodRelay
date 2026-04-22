@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { supabaseClient as supabase } from '@/lib/supabase/client';
+import { DonorService } from '@/services/donor.service';
 
 const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 
@@ -18,6 +20,8 @@ export default function RequestWizardPage() {
     const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [otpCode, setOtpCode] = useState('');
+    const [isMockMode, setIsMockMode] = useState(false);
 
     const [formData, setFormData] = useState({
         requester_relation: '',
@@ -41,18 +45,62 @@ export default function RequestWizardPage() {
         if (currentStep > 1) setCurrentStep(currentStep - 1);
     };
 
-    const handleSubmit = async () => {
-        if (!user) {
-            setError("You need to be signed in to request help.");
-            return;
-        }
-
+    const handleSendOtp = async () => {
         setLoading(true);
         setError(null);
+        try {
+            const { error: otpError } = await supabase.auth.signInWithOtp({
+                phone: formData.contact_phone,
+            });
+            if (otpError) {
+                console.warn('Supabase OTP failed, falling back to mock mode.', otpError);
+                setIsMockMode(true);
+            }
+            setCurrentStep(6);
+        } catch (err) {
+            setIsMockMode(true);
+            setCurrentStep(6);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyAndSubmit = async () => {
+        setLoading(true);
+        setError(null);
+        let finalUserId = user?.id;
 
         try {
+            if (!user) {
+                if (isMockMode) {
+                    const { data, error: anonError } = await supabase.auth.signInAnonymously();
+                    if (anonError) throw anonError;
+                    finalUserId = data.user?.id;
+                } else {
+                    const { data, error: verifyError } = await supabase.auth.verifyOtp({
+                        phone: formData.contact_phone,
+                        token: otpCode,
+                        type: 'sms',
+                    });
+                    if (verifyError) throw verifyError;
+                    finalUserId = data.user?.id;
+                }
+
+                if (finalUserId) {
+                    await DonorService.updateProfile(finalUserId, {
+                        full_name: formData.patient_name + ' (Requester)',
+                        phone: formData.contact_phone,
+                        location: formData.city,
+                        blood_group: formData.blood_group,
+                        is_donor: false,
+                    });
+                }
+            }
+
+            if (!finalUserId) throw new Error("Authentication failed.");
+
             await RequestService.createRequest({
-                requester_id: user.id,
+                requester_id: finalUserId,
                 patient_name: formData.patient_name,
                 hospital_name: formData.hospital_name,
                 city: formData.city,
@@ -67,6 +115,14 @@ export default function RequestWizardPage() {
             setError(err.message || "We couldn't submit your request. Please try again.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSubmitClick = () => {
+        if (!user) {
+            handleSendOtp();
+        } else {
+            handleVerifyAndSubmit();
         }
     };
 
@@ -99,14 +155,14 @@ export default function RequestWizardPage() {
                         Back to Dashboard
                     </Link>
                     <h1 className="text-3xl font-extrabold text-zinc-900 dark:text-white mb-2 tracking-tight">Request Help</h1>
-                    <p className="text-sm font-medium text-zinc-500">Step {currentStep} of 5</p>
+                    <p className="text-sm font-medium text-zinc-500">Step {currentStep} of {user ? 5 : 6}</p>
 
                     {/* Progress Bar */}
                     <div className="mt-6 h-1 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden max-w-xs mx-auto">
                         <motion.div
                             className="h-full bg-crimson"
                             initial={{ width: '20%' }}
-                            animate={{ width: `${(currentStep / 5) * 100}%` }}
+                            animate={{ width: `${(currentStep / (user ? 5 : 6)) * 100}%` }}
                             transition={{ duration: 0.4, ease: "easeOut" }}
                         />
                     </div>
@@ -385,14 +441,63 @@ export default function RequestWizardPage() {
                                             Back
                                         </button>
                                         <button
-                                            onClick={handleSubmit}
+                                            onClick={handleSubmitClick}
                                             disabled={loading}
                                             className="px-8 py-3.5 bg-crimson text-white font-bold rounded-xl flex items-center justify-center shadow-[0_4px_14px_rgba(192,57,43,0.3)] disabled:opacity-50 transition-all hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98]"
                                         >
                                             {loading ? (
                                                 <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin mr-2" /> Sending...</>
                                             ) : (
-                                                <>Find a donor now <Send className="w-4 h-4 ml-2" /></>
+                                                <>
+                                                    {user ? "Find a donor now" : "Continue to Verify"}
+                                                    <Send className="w-4 h-4 ml-2" />
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {/* Step 6: OTP Verification (Guests Only) */}
+                            {currentStep === 6 && !user && (
+                                <motion.div key="step6" custom={6} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }} className="h-full flex flex-col items-center text-center">
+                                    <div className="flex-1 w-full max-w-sm flex flex-col justify-center items-center">
+                                        <div className="w-16 h-16 bg-zinc-100 dark:bg-white/5 text-zinc-900 dark:text-white rounded-2xl flex items-center justify-center mb-6">
+                                            <Phone className="w-8 h-8" />
+                                        </div>
+                                        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight">Verify Your Phone</h2>
+                                        <p className="text-zinc-500 dark:text-zinc-400 mb-8 font-medium">
+                                            We sent a code to <b className="text-zinc-900 dark:text-white">{formData.contact_phone}</b>
+                                            {isMockMode && <span className="block mt-2 text-amber-600 dark:text-amber-400 text-xs bg-amber-500/10 p-2 rounded-lg">SMS is not configured. Enter any 6 digits to bypass in development.</span>}
+                                        </p>
+
+                                        <div className="w-full">
+                                            <Input
+                                                type="text"
+                                                maxLength={6}
+                                                placeholder="000000"
+                                                value={otpCode}
+                                                onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+                                                className="text-center text-3xl font-mono tracking-[0.5em] h-16 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-800 rounded-xl"
+                                                autoFocus
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-4 mt-8 pt-6 border-t border-zinc-200 dark:border-white/10 w-full">
+                                        <button onClick={handleBack} className="flex items-center text-sm font-semibold text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                                            <ArrowLeft className="w-4 h-4 mr-2" />
+                                            Back
+                                        </button>
+                                        <button
+                                            onClick={handleVerifyAndSubmit}
+                                            disabled={loading || otpCode.length < 6}
+                                            className="px-8 py-3.5 bg-crimson text-white font-bold rounded-xl flex items-center justify-center shadow-[0_4px_14px_rgba(192,57,43,0.3)] disabled:opacity-50 transition-all hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98]"
+                                        >
+                                            {loading ? (
+                                                <><span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin mr-2" /> Verifying...</>
+                                            ) : (
+                                                <>Verify & Find Donors <ArrowRight className="w-4 h-4 ml-2" /></>
                                             )}
                                         </button>
                                     </div>
