@@ -267,6 +267,8 @@ export default function Home() {
           </div>
         </section>
 
+      </main>
+
       {/* ── Footer ─────────────────────────────────────────── */}
       <footer className="border-t border-zinc-200/60 bg-white py-12">
         <div className="max-w-5xl mx-auto px-6">
