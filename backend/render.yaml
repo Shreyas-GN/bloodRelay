@@ -11,7 +11,7 @@ services:
           name: pulse-aid-db
           property: connectionString
       - key: REDIS_URL
-        sync: false # You will paste the Upstash URL here
+        value: "rediss://default:gQAAAAAAAWOFAAIgcDIxYzAyZWM1OTIxODk0Njk3YWQzN2IwN2YzZDM5ZDJiMg@relieved-tick-91013.upstash.io:6379"
       - key: ALLOWED_HOSTS
         value: "*"
       - key: DEBUG
