@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import { Badge } from '@/components/ui/Badge';
+import { AlertService } from '@/services/alert.service';
 import { Button } from "@/components/ui/Button";
 import { DonorAvailabilityToggle } from "@/components/DonorAvailabilityToggle";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -93,6 +95,16 @@ export default function DashboardPage() {
         setAcceptingId(requestId);
         try {
             await DonorService.submitDonorResponse(requestId.toString(), profile!.id.toString());
+            
+            // Find the request to get the phone number
+            const req = allRequests.find((r: any) => r.id === requestId);
+            if (req?.contact_phone) {
+                await AlertService.sendSMS(
+                    req.contact_phone,
+                    `PULSE-AID ALERT: Good news! ${profile?.full_name || 'A donor'} has offered to donate blood for ${req.patient_name || 'your request'}. They may contact you shortly. Please check your dashboard for details.`
+                );
+            }
+
             setAcceptedIds((prev) => new Set(prev).add(requestId));
             await fetchData();
         } catch (err: any) {

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { CancelRequestButton } from '@/components/CancelRequestButton';
+import { AlertService } from '@/services/alert.service';
 
 interface BloodRequest {
     id: number;
@@ -75,7 +76,7 @@ export default function RequestDetailPage() {
     const [bloodBanks, setBloodBanks] = useState<BloodBank[]>([]);
     const [loading, setLoading] = useState(true);
     const [accepting, setAccepting] = useState(false);
-    const [currentUserProfile, setCurrentUserProfile] = useState<{ id: number } | null>(null);
+    const [currentUserProfile, setCurrentUserProfile] = useState<any | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -153,6 +154,43 @@ export default function RequestDetailPage() {
             fetchRequest();
             if (user) fetchCurrentUser();
         }
+        
+        // --- Real-time Subscription ---
+        let channel: any;
+        const setupRealtime = async () => {
+            const { supabaseClient } = await import('@/lib/supabase/client');
+            channel = supabaseClient
+                .channel(`request_${params.id}_responses`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'donor_responses',
+                        filter: `request_id=eq.${params.id}`
+                    },
+                    async (payload) => {
+                        console.log('Live update: donor response changed!', payload);
+                        try {
+                            const responses = await DonorService.getResponsesForRequest(params.id as string);
+                            setAcceptedDonors(responses);
+                        } catch (e) {
+                            console.error('Failed to refetch responses:', e);
+                        }
+                    }
+                )
+                .subscribe();
+        };
+        
+        if (params.id) {
+            setupRealtime();
+        }
+
+        return () => {
+            if (channel) {
+                channel.unsubscribe();
+            }
+        };
     }, [params.id, api, user]);
 
     const handleAcceptRequest = async () => {
@@ -164,6 +202,14 @@ export default function RequestDetailPage() {
         setAccepting(true);
         try {
             await DonorService.submitDonorResponse(params.id as string, currentUserProfile.id.toString());
+            
+            // Send Alert to Requester
+            if (request?.contact_phone) {
+                await AlertService.sendSMS(
+                    request.contact_phone, 
+                    `PULSE-AID ALERT: Good news! ${currentUserProfile.full_name || 'A donor'} has offered to donate blood for ${request.patient_name}. They may contact you shortly. Please check your Pulse-Aid dashboard for their details.`
+                );
+            }
             
             // Fetch updated responses
             const responses = await DonorService.getResponsesForRequest(params.id as string);
