@@ -82,7 +82,11 @@ export default function DashboardPage() {
     const handleAccept = async (requestId: any) => {
         setAcceptingId(requestId);
         try {
-            await RequestService.updateRequest(requestId, { status: 'fulfilled' });
+            await RequestService.updateRequest(requestId, { 
+                status: 'DONOR_ACCEPTED',
+                donor_name: profile?.full_name || user?.firstName || 'A generous donor',
+                donor_phone: profile?.phone || ''
+            });
             setAcceptedIds((prev) => new Set(prev).add(requestId));
             await fetchData();
         } catch (err: any) {
@@ -110,7 +114,7 @@ export default function DashboardPage() {
         (r) =>
             r.requester_id !== (profile?.id ?? -1) &&
             r.blood_group === profile?.blood_group &&
-            (r.status === "SEARCHING_FOR_DONORS" || r.status === "CREATED" || r.status === "open")
+            ((r.status === "SEARCHING_FOR_DONORS" || r.status === "CREATED" || r.status === "open") || (r.status === "DONOR_ACCEPTED" && r.donor_phone === profile?.phone))
     );
 
     const displayName = user?.firstName ?? user?.username ?? "There";
@@ -331,6 +335,15 @@ export default function DashboardPage() {
                                                     </div>
 
                                                     {/* Execution Engine */}
+                                                    {req.status === 'DONOR_ACCEPTED' && req.donor_phone === profile?.phone ? (
+                                                        <div className="w-full bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl">
+                                                            <p className="text-sm font-bold text-emerald-800 dark:text-emerald-400 mb-1">You are helping {req.patient_name}!</p>
+                                                            <p className="text-xs text-emerald-700 dark:text-emerald-500 mb-3">Please call the patient's contact right away to coordinate the donation.</p>
+                                                            <a href={`tel:${req.contact_phone}`} className="flex items-center justify-center gap-2 w-full py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all">
+                                                                Call {req.contact_phone}
+                                                            </a>
+                                                        </div>
+                                                    ) : (
                                                     <motion.button
                                                         whileHover={{ scale: 0.98 }}
                                                         whileTap={{ scale: 0.95 }}
@@ -355,6 +368,7 @@ export default function DashboardPage() {
                                                             <>I can help</>
                                                         )}
                                                     </motion.button>
+                                                    )}
                                                 </div>
                                             </motion.div>
                                         ))}
@@ -404,6 +418,16 @@ export default function DashboardPage() {
                                                                 <p className="text-xs font-semibold text-zinc-500 truncate">{req.hospital_name}</p>
                                                             </div>
                                                         </div>
+
+                                                        {req.status === 'DONOR_ACCEPTED' && req.donor_phone && (
+                                                            <div className="mt-4 pt-4 border-t border-zinc-100 dark:border-white/5">
+                                                                <p className="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wider">Donor Found</p>
+                                                                <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">{req.donor_name}</p>
+                                                                <a href={`tel:${req.donor_phone}`} className="inline-block px-4 py-2 bg-zinc-100 dark:bg-white/10 rounded-lg text-sm font-bold text-zinc-900 dark:text-white hover:bg-zinc-200 transition-colors">
+                                                                    Call Donor
+                                                                </a>
+                                                            </div>
+                                                        )}
 
                                                     </div>
                                                 </Link>

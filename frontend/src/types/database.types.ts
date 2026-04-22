@@ -53,8 +53,10 @@ export interface Database {
           contact_phone: string | null
           urgency_level: string | null
           location: string
-          status: 'open' | 'fulfilled' | 'cancelled'
+          status: 'open' | 'fulfilled' | 'cancelled' | 'DONOR_ACCEPTED' | 'SEARCHING_FOR_DONORS' | 'CREATED'
           created_at: string
+          donor_name: string | null
+          donor_phone: string | null
         }
         Insert: {
           id?: string
@@ -67,8 +69,10 @@ export interface Database {
           contact_phone?: string | null
           urgency_level?: string | null
           location: string
-          status?: 'open' | 'fulfilled' | 'cancelled'
+          status?: 'open' | 'fulfilled' | 'cancelled' | 'DONOR_ACCEPTED' | 'SEARCHING_FOR_DONORS' | 'CREATED'
           created_at?: string
+          donor_name?: string | null
+          donor_phone?: string | null
         }
         Update: {
           id?: string
@@ -81,8 +85,10 @@ export interface Database {
           contact_phone?: string | null
           urgency_level?: string | null
           location?: string
-          status?: 'open' | 'fulfilled' | 'cancelled'
+          status?: 'open' | 'fulfilled' | 'cancelled' | 'DONOR_ACCEPTED' | 'SEARCHING_FOR_DONORS' | 'CREATED'
           created_at?: string
+          donor_name?: string | null
+          donor_phone?: string | null
         }
       }
     }

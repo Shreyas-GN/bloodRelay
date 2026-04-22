@@ -104,16 +104,41 @@ export default function SettingsPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [settingsRes, profileRes] = await Promise.all([
-                    api.get('users/settings/'),
-                    api.get('users/profile/')
-                ]);
-                setSettings(settingsRes.data);
-                setProfile(profileRes.data);
-                setProfileFormData({
-                    city: profileRes.data.city || '',
-                    blood_group: profileRes.data.blood_group || ''
+                if (!user) return;
+                const { DonorService } = await import('@/services/donor.service');
+                const profileData = await DonorService.getProfile(user.id).catch(() => null);
+                
+                setSettings({
+                    auto_disable_on_accept: true,
+                    auto_disable_after_donation: false,
+                    notification_distance_km: 10,
+                    emergency_types: 'ALL',
+                    push_notifications: true,
+                    status_updates: true,
+                    show_phone_number: true,
+                    share_location: false,
+                    language: 'en',
+                    text_size: 'NORMAL',
+                    is_paused: false
                 });
+                
+                if (profileData) {
+                    setProfile({
+                        id: 1,
+                        first_name: profileData.full_name?.split(' ')[0] || user.firstName || '',
+                        last_name: profileData.full_name?.split(' ').slice(1).join(' ') || user.lastName || '',
+                        blood_group: profileData.blood_group,
+                        city: profileData.location || '',
+                        phone_number: profileData.phone || '',
+                        is_available_donor: profileData.is_available_donor,
+                        date_joined: profileData.created_at,
+                        last_donation_date: null
+                    });
+                    setProfileFormData({
+                        city: profileData.location || '',
+                        blood_group: profileData.blood_group || ''
+                    });
+                }
             } catch (error) {
                 console.error('Failed to load data', error);
             } finally {
@@ -128,7 +153,7 @@ export default function SettingsPage() {
                 router.push('/');
             }
         }
-    }, [isLoaded, user, api, router]);
+    }, [isLoaded, user, router]);
 
     // --- Handlers ---
     const updateSetting = async (key: keyof UserSettings, value: any) => {
@@ -143,21 +168,30 @@ export default function SettingsPage() {
     };
 
     const toggleAvailability = async (checked: boolean) => {
-        if (!profile) return;
+        if (!profile || !user) return;
         const prev = profile.is_available_donor;
         setProfile({ ...profile, is_available_donor: checked });
         try {
-            await api.post('users/toggle-availability/', { is_available: checked });
+            const { DonorService } = await import('@/services/donor.service');
+            await DonorService.updateProfile(user.id, { is_available_donor: checked });
         } catch (error) {
             setProfile({ ...profile, is_available_donor: prev });
         }
     };
 
     const saveProfile = async () => {
-        if (!profile) return;
+        if (!profile || !user) return;
         try {
-            const response = await api.post('users/profile/', profileFormData);
-            setProfile(response.data);
+            const { DonorService } = await import('@/services/donor.service');
+            await DonorService.updateProfile(user.id, { 
+                location: profileFormData.city,
+                blood_group: profileFormData.blood_group
+            });
+            setProfile({
+                ...profile,
+                city: profileFormData.city,
+                blood_group: profileFormData.blood_group
+            });
             setIsEditingProfile(false);
         } catch (error) {
             console.error('Failed to update profile', error);
