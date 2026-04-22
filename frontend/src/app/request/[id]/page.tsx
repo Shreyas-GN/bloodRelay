@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useApiClient } from '@/lib/useApiClient';
 import { useUser } from '@clerk/nextjs';
+import { DonorService } from '@/services/donor.service';
 import { AlertCircle, Droplet, MapPin, Phone, User, Clock, CheckCircle, ArrowLeft, Heart, Edit, Trash2, Share2, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -84,11 +85,44 @@ export default function RequestDetailPage() {
 
                 if (response.data.status === 'CREATED' || response.data.status === 'SEARCHING_FOR_DONORS') {
                     try {
-                        const donorsResponse = await api.get(`requests/${params.id}/donors/`);
-                        setDonors(donorsResponse.data.matching_donors || []);
-                        setBloodBanks(donorsResponse.data.fallback_blood_banks || []);
+                        let matchingDonors = [];
+                        let fallbackBloodBanks = [];
+
+                        // 1. Try fetching via PostGIS RPC first if location exists
+                        const locMatch = response.data.location?.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
+                        if (locMatch) {
+                            const lng = parseFloat(locMatch[1]);
+                            const lat = parseFloat(locMatch[2]);
+                            
+                            // 20km radius search
+                            const nearbyDonors = await DonorService.getNearbyDonors(lat, lng, 20); 
+                            
+                            // Filter by exact blood group match
+                            matchingDonors = nearbyDonors
+                                .filter((d: any) => d.blood_group === response.data.blood_group)
+                                .map((d: any) => ({
+                                    id: d.id,
+                                    name: d.full_name,
+                                    blood_group: d.blood_group,
+                                    city: 'Nearby', 
+                                    phone_number: d.phone,
+                                    distance_km: Math.round(d.distance_meters / 100) / 10 
+                                }));
+                        }
+
+                        // Fallback to old API if RPC returned nothing (e.g. migration transition)
+                        if (matchingDonors.length === 0) {
+                            try {
+                                const donorsResponse = await api.get(`requests/${params.id}/donors/`);
+                                matchingDonors = donorsResponse.data.matching_donors || [];
+                                fallbackBloodBanks = donorsResponse.data.fallback_blood_banks || [];
+                            } catch (fallbackErr) {}
+                        }
+
+                        setDonors(matchingDonors);
+                        setBloodBanks(fallbackBloodBanks);
                     } catch (e) {
-                        // Ignore
+                        console.error('Error fetching nearby donors:', e);
                     }
                 }
             } catch (err: any) {

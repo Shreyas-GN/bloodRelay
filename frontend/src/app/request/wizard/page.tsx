@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { RequestService } from '@/services/request.service';
@@ -22,6 +22,17 @@ export default function RequestWizardPage() {
     const [error, setError] = useState<string | null>(null);
     const [otpCode, setOtpCode] = useState('');
     const [isMockMode, setIsMockMode] = useState(false);
+    const [gpsLocation, setGpsLocation] = useState<{lat: number, lng: number} | null>(null);
+
+    useEffect(() => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (pos) => setGpsLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                (err) => console.warn("Geolocation denied or unavailable:", err),
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    }, []);
 
     const [formData, setFormData] = useState({
         requester_relation: '',
@@ -108,7 +119,7 @@ export default function RequestWizardPage() {
                 blood_group: formData.blood_group,
                 units: formData.units,
                 urgency_level: formData.urgency_level,
-                location: 'POINT(0 0)', 
+                location: gpsLocation ? `POINT(${gpsLocation.lng} ${gpsLocation.lat})` : 'POINT(0 0)', 
             });
             router.push('/dashboard');
         } catch (err: any) {

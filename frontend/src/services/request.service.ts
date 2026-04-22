@@ -38,6 +38,22 @@ export class RequestService {
     if (error) {
        throw new Error(`Failed to fetch active requests: ${error.message}`)
     }
+    return data
+  }
+
+  /**
+   * Retrieves a specific request by ID.
+   */
+  static async getRequestById(requestId: string) {
+    const { data, error } = await db
+      .from('blood_requests')
+      .select('*')
+      .eq('id', requestId)
+      .single()
+
+    if (error) {
+       throw new Error(`Failed to fetch request: ${error.message}`)
+    }
     
     return data
   }
