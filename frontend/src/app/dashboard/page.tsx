@@ -54,8 +54,8 @@ export default function DashboardPage() {
     const [allRequests, setAllRequests] = useState<BloodRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [tab, setTab] = useState<Tab>("donate");
-    const [acceptingId, setAcceptingId] = useState<number | null>(null);
-    const [acceptedIds, setAcceptedIds] = useState<Set<number>>(new Set());
+    const [acceptingId, setAcceptingId] = useState<number | string | null>(null);
+    const [acceptedIds, setAcceptedIds] = useState<Set<number | string>>(new Set());
 
     const fetchData = useCallback(async () => {
         if (!user?.id) return;
@@ -304,7 +304,7 @@ export default function DashboardPage() {
                                                     
                                                     {/* Header Status Phase */}
                                                     <div className="flex items-start justify-between mb-6">
-                                                        <div className={`px-3 py-1.5 rounded-lg border text-sm font-bold tracking-tight ${URGENCY_COLOR[req.urgency_level] ?? "bg-zinc-100 text-zinc-900"}`}>
+                                                        <div className={`px-3 py-1.5 rounded-lg border text-sm font-bold tracking-tight ${URGENCY_COLOR[req.urgency_level ?? ""] ?? "bg-zinc-100 text-zinc-900 border-zinc-200"}`}>
                                                             {req.blood_group} needed
                                                         </div>
                                                         {req.urgency_level === "IMMEDIATE" && (
@@ -410,7 +410,7 @@ export default function DashboardPage() {
                                                         </div>
 
                                                         <div className="flex items-center gap-4 mb-4">
-                                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm tracking-tight border ${URGENCY_COLOR[req.urgency_level] ?? "bg-zinc-100 text-zinc-900 border-zinc-200"}`}>
+                                                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm tracking-tight border ${URGENCY_COLOR[req.urgency_level ?? ""] ?? "bg-zinc-100 text-zinc-900 border-zinc-200"}`}>
                                                                 {req.blood_group}
                                                             </div>
                                                             <div className="overflow-hidden">
