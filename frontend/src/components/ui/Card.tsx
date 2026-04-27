@@ -11,6 +11,7 @@ const cardVariants = cva(
                 glass: "glass shadow-xl",
                 elevated: "bg-white shadow-xl hover:shadow-2xl border-t-4",
                 flat: "bg-white border border-gray-200",
+                clay: "clay-card",
             },
             padding: {
                 none: "p-0",

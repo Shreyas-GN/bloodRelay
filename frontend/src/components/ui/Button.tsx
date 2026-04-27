@@ -20,6 +20,10 @@ const buttonVariants = cva(
                     "bg-green-600 text-white hover:bg-green-700 focus-visible:ring-green-600 shadow-md hover:shadow-lg",
                 danger:
                     "bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-600 shadow-md hover:shadow-lg",
+                clay:
+                    "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 clay-button-hover shadow-clay",
+                "ghost-clay":
+                    "bg-zinc-100 dark:bg-zinc-800/50 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-800 clay-button-hover shadow-clay",
             },
             size: {
                 sm: "h-9 px-3 text-xs",

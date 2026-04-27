@@ -49,6 +49,7 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
     const [loading, setLoading] = useState(false);
     const [accepting, setAccepting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showMap, setShowMap] = useState(false);
 
     const fetchRequest = useCallback(async () => {
         if (!requestId) return;
@@ -165,6 +166,7 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
     const isRequester = currentUserProfile?.id && request?.requester_id && 
         currentUserProfile.id.toString() === request.requester_id.toString();
     const isResponding = acceptedDonors.some(d => d.donor_id?.toString() === currentUserProfile?.id?.toString());
+    const canSupport = !isRequester && !isResponding && !isClosed;
 
     return (
         <AnimatePresence>
@@ -188,7 +190,7 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
                         animate={{ x: 0 }}
                         exit={{ x: "100%" }}
                         transition={{ type: "spring", stiffness: 320, damping: 35 }}
-                        className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-lg bg-zinc-50 dark:bg-zinc-950 shadow-2xl overflow-y-auto flex flex-col"
+                        className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-lg bg-zinc-50 dark:bg-zinc-950 shadow-2xl overflow-y-auto flex flex-col rounded-l-[40px]"
                     >
                         {/* Header */}
                         <div className="sticky top-0 z-10 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200/50 dark:border-white/10 px-6 h-16 flex items-center justify-between shrink-0">
@@ -257,7 +259,7 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
                                     )}
 
                                     {/* Case File Card */}
-                                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-white/10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden relative">
+                                    <div className="bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-white/10 rounded-[2rem] shadow-clay overflow-hidden relative">
                                         {isClosed && (
                                             <div className="absolute inset-0 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-[2px] z-10 flex items-center justify-center">
                                                 <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3">
@@ -342,25 +344,49 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
                                         </div>
                                     </div>
 
-                                    {/* Map Preview */}
+                                     {/* Map Preview */}
                                     {request.location && request.location !== 'POINT(0 0)' && (
                                         <div className="space-y-3">
-                                            <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest px-1">Hospital Location</p>
-                                            <div className="h-48 w-full rounded-[2rem] overflow-hidden border border-zinc-200/50 dark:border-white/10 shadow-sm">
-                                            <Map 
-                                                center={[parseLocation(request.location)!.lng, parseLocation(request.location)!.lat]}
-                                                zoom={14}
-                                                markers={[{
-                                                    id: 'hospital',
-                                                    lat: parseLocation(request.location)!.lat,
-                                                    lng: parseLocation(request.location)!.lng,
-                                                    label: request.hospital_name,
-                                                    type: 'hospital'
-                                                }]}
-                                                className="h-full w-full"
-                                            />
+                                            <div className="flex items-center justify-between px-1">
+                                                <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest">Hospital Location</p>
+                                                {!showMap && (
+                                                    <button 
+                                                        onClick={() => setShowMap(true)}
+                                                        className="text-[10px] font-bold text-crimson hover:underline uppercase tracking-wider"
+                                                    >
+                                                        View Map
+                                                    </button>
+                                                )}
+                                            </div>
+                                            
+                                            {showMap ? (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: "192px" }}
+                                                    className="h-48 w-full rounded-[2rem] overflow-hidden border border-zinc-200/50 dark:border-white/10 shadow-sm"
+                                                >
+                                                    <Map 
+                                                        center={[parseLocation(request.location)!.lng, parseLocation(request.location)!.lat]}
+                                                        zoom={14}
+                                                        markers={[{
+                                                            id: 'hospital',
+                                                            lat: parseLocation(request.location)!.lat,
+                                                            lng: parseLocation(request.location)!.lng,
+                                                            label: request.hospital_name,
+                                                            type: 'hospital'
+                                                        }]}
+                                                        className="h-full w-full"
+                                                    />
+                                                </motion.div>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => setShowMap(true)}
+                                                    className="w-full h-12 bg-zinc-100 dark:bg-white/5 border-2 border-dashed border-zinc-200 dark:border-white/10 rounded-[1.25rem] flex items-center justify-center gap-2 text-sm font-bold text-zinc-500 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors"
+                                                >
+                                                    <MapPin className="w-4 h-4" /> Load Map
+                                                </button>
+                                            )}
                                         </div>
-                                    </div>
                                     )}
 
                                     {/* Donor Responses */}
@@ -399,32 +425,36 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
                                         </motion.div>
                                     )}
 
-                                    {/* Actions */}
+                                     {/* Actions */}
                                     {!isClosed && (
                                         <div className="space-y-3">
-                                            {!isRequester ? (
-                                                !isResponding ? (
-                                                    <button
-                                                        onClick={handleAccept}
-                                                        disabled={accepting}
-                                                        className="w-full py-4 bg-crimson text-white text-base font-bold rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgba(192,57,43,0.3)] transition-all hover:bg-red-700 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100"
-                                                    >
-                                                        {accepting ? (
-                                                            <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Processing...</>
-                                                        ) : (
-                                                            <><Heart className="w-5 h-5 mr-2" />I can help them</>
-                                                        )}
-                                                    </button>
-                                                ) : (
-                                                    <button disabled className="w-full py-4 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-base font-bold rounded-2xl flex items-center justify-center">
-                                                        <CheckCircle className="w-5 h-5 mr-2" /> You are responding
-                                                    </button>
-                                                )
-                                            ) : (
+                                            {canSupport ? (
+                                                <button
+                                                    onClick={handleAccept}
+                                                    disabled={accepting}
+                                                    className="w-full py-4 bg-crimson text-white text-base font-bold rounded-2xl flex items-center justify-center shadow-[0_8px_30px_rgba(192,57,43,0.3)] clay-button-hover hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100"
+                                                >
+                                                    {accepting ? (
+                                                        <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Processing...</>
+                                                    ) : (
+                                                        <><Heart className="w-5 h-5 mr-2" />I can help them</>
+                                                    )}
+                                                </button>
+                                            ) : isResponding ? (
+                                                <button disabled className="w-full py-4 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-base font-bold rounded-2xl flex items-center justify-center">
+                                                    <CheckCircle className="w-5 h-5 mr-2" /> You are responding
+                                                </button>
+                                            ) : isRequester ? (
+                                                <div className="p-4 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl text-center">
+                                                    <p className="text-sm font-bold text-zinc-500">This is your request</p>
+                                                </div>
+                                            ) : null}
+
+                                            {isRequester && !isClosed && (
                                                 <>
                                                     <button
                                                         onClick={handleComplete}
-                                                        className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-base font-bold rounded-2xl flex items-center justify-center shadow-md transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                                        className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-base font-bold rounded-2xl flex items-center justify-center shadow-md clay-button-hover"
                                                     >
                                                         <CheckCircle className="w-5 h-5 mr-2" /> Mark as Fulfilled
                                                     </button>

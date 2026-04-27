@@ -7,6 +7,7 @@ import { DonorService } from '@/services/donor.service';
 import { Droplet, MapPin, Phone, Heart, ArrowRight, ShieldCheck, Check } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/Input';
+import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
 
 const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 
@@ -76,7 +77,7 @@ export default function OnboardingPage() {
                         </p>
                     </div>
 
-                    <div className="bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200/50 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+                    <div className="bg-white dark:bg-zinc-900 rounded-[2.5rem] border border-zinc-200/50 dark:border-white/10 shadow-clay overflow-hidden">
                         <div className="p-8 sm:p-10">
                             {error && (
                                 <div className="mb-8 p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-700 dark:text-rose-400 text-sm font-medium flex items-center gap-2">
@@ -99,9 +100,9 @@ export default function OnboardingPage() {
                                                     key={bg}
                                                     type="button"
                                                     onClick={() => setFormData({ ...formData, blood_group: bg })}
-                                                    className={`py-4 rounded-xl font-bold font-mono text-lg transition-all border-2 ${isSelected
-                                                            ? 'border-crimson bg-rose-500/5 text-crimson scale-[1.02] shadow-sm'
-                                                            : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700'
+                                                    className={`py-4 rounded-xl font-bold font-mono text-lg transition-all border-2 clay-button-hover ${isSelected
+                                                            ? 'border-crimson bg-rose-500/5 text-crimson scale-[1.02] shadow-clay'
+                                                            : 'border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 shadow-sm'
                                                         }`}
                                                 >
                                                     {bg}
@@ -140,15 +141,12 @@ export default function OnboardingPage() {
                                             Current City <span className="text-crimson">*</span>
                                         </label>
                                         <div className="relative">
-                                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-                                            <Input
-                                                type="text"
-                                                required
-                                                minLength={3}
-                                                className="pl-12 h-14 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-800 rounded-xl font-medium"
+                                            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400 z-10" />
+                                            <LocationAutocomplete
                                                 placeholder="e.g. Bangalore"
                                                 value={formData.location}
-                                                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                                onChange={(val) => setFormData({ ...formData, location: val })}
+                                                className="pl-12 h-14 bg-zinc-50 dark:bg-zinc-800/50 border-zinc-200 dark:border-zinc-800 rounded-xl font-medium"
                                             />
                                         </div>
                                     </div>
@@ -183,7 +181,7 @@ export default function OnboardingPage() {
                                     <button
                                         type="submit"
                                         disabled={loading || !formData.blood_group || !formData.phone || !formData.location}
-                                        className="w-full h-14 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold rounded-xl flex items-center justify-center shadow-md disabled:opacity-50 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                        className="w-full h-14 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold rounded-xl flex items-center justify-center shadow-clay clay-button-hover disabled:opacity-50 disabled:scale-100 transition-all hover:scale-[1.02] active:scale-[0.98]"
                                     >
                                         {loading ? (
                                             <><span className="w-5 h-5 rounded-full border-2 border-white/30 dark:border-black/30 border-t-white dark:border-t-black animate-spin mr-3" /> Saving Profile...</>

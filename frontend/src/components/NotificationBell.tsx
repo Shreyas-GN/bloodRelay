@@ -24,12 +24,8 @@ export function NotificationBell() {
     const router = useRouter();
 
     useEffect(() => {
-        // Request actual push notification permissions on mount
         requestNotificationPermission();
     }, [requestNotificationPermission]);
-
-    // Live WebSocket messages could be integrated into the state management here
-    // For now, we rely on the hook which triggers native notifications.
 
     const handleClick = async (notification: Notification) => {
         if (!notification.is_read) {
@@ -47,11 +43,10 @@ export function NotificationBell() {
                 whileHover={{ scale: 0.95 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setIsOpen((prev) => !prev)}
-                className="relative p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors group"
+                className="relative p-[8px] rounded-full bg-white border-[1.5px] border-[var(--color-base-200)] shadow-[var(--shadow-clay)] hover:border-[var(--color-blood)] transition-colors group flex items-center justify-center"
                 aria-label="Toggle notifications"
             >
-                <div className="absolute inset-0 rounded-full border border-slate-200 dark:border-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                <Bell className="w-5 h-5 text-slate-700 dark:text-slate-300 group-hover:text-blue-600 transition-colors" />
+                <Bell className="w-5 h-5 text-[var(--color-base-700)] group-hover:text-[var(--color-blood)] transition-colors" />
                 
                 <AnimatePresence>
                     {(unreadCount > 0 || messages.length > 0) && (
@@ -59,7 +54,7 @@ export function NotificationBell() {
                             initial={{ scale: 0, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0, opacity: 0 }}
-                            className="absolute top-0 right-0 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold text-white bg-red-500 rounded-full translate-x-1/3 -translate-y-1/3 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                            className="absolute top-[-4px] right-[-4px] inline-flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[0.625rem] font-mono font-bold text-white bg-[var(--color-blood)] rounded-full shadow-[var(--shadow-clay-hard)] border-2 border-white"
                         >
                             {(unreadCount + messages.length) > 99 ? "99+" : (unreadCount + messages.length)}
                         </motion.span>
@@ -73,70 +68,63 @@ export function NotificationBell() {
                         <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
 
                         <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.98, filter: "blur(4px)" }}
-                            animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-                            exit={{ opacity: 0, y: 10, scale: 0.98, filter: "blur(4px)" }}
-                            transition={{ duration: 0.4, ease: [0.32, 0.72, 0, 1] }}
-                            className="absolute right-0 mt-3 w-96 z-50 flex flex-col p-1.5 rounded-[1.5rem] bg-white/5 dark:bg-black/10 backdrop-blur-3xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-slate-200 dark:border-white/10"
+                            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.98 }}
+                            transition={{ duration: 0.2 }}
+                            className="absolute right-0 mt-3 w-80 z-50 flex flex-col bg-white rounded-[var(--radius-card)] shadow-[var(--shadow-clay-hard)] border-[1.5px] border-[var(--color-base-200)] overflow-hidden"
                         >
-                            <div className="flex-1 max-h-[600px] overflow-hidden rounded-[calc(1.5rem-0.375rem)] bg-white dark:bg-zinc-950 flex flex-col">
-                                <div className="px-5 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/[0.02]">
-                                    <h3 className="text-[13px] font-semibold text-slate-900 dark:text-white uppercase tracking-wider">Notifications</h3>
-                                    {(unreadCount > 0 || messages.length > 0) && (
-                                        <button
-                                            onClick={markAllAsRead}
-                                            className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 font-medium transition-colors"
-                                        >
-                                            Mark all read
-                                        </button>
-                                    )}
-                                </div>
+                            <div className="px-5 py-4 border-b border-[var(--color-base-200)] flex items-center justify-between bg-[var(--color-base-50)]">
+                                <h3 className="font-mono text-[0.75rem] font-bold text-[var(--color-base-500)] uppercase tracking-widest">Notifications</h3>
+                                {(unreadCount > 0 || messages.length > 0) && (
+                                    <button
+                                        onClick={markAllAsRead}
+                                        className="text-[0.75rem] text-[var(--color-blood)] hover:underline font-bold transition-colors"
+                                    >
+                                        Mark all read
+                                    </button>
+                                )}
+                            </div>
 
-                                <div className="overflow-y-auto flex-1 p-2 space-y-1">
-                                    {(notifications.length === 0 && messages.length === 0) ? (
-                                        <div className="p-8 text-center text-slate-500 flex flex-col items-center justify-center">
-                                            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center mb-3">
-                                                <Bell className="w-5 h-5 text-slate-400" />
-                                            </div>
-                                            <p className="font-medium text-sm">Quiet right now</p>
-                                            <p className="text-xs mt-1 text-slate-400">You&apos;re all caught up on alerts.</p>
+                            <div className="overflow-y-auto max-h-[400px] flex-1 flex flex-col">
+                                {(notifications.length === 0 && messages.length === 0) ? (
+                                    <div className="p-8 text-center flex flex-col items-center justify-center">
+                                        <div className="w-12 h-12 rounded-full bg-[var(--color-base-50)] border-[1.5px] border-[var(--color-base-200)] flex items-center justify-center mb-3">
+                                            <Bell className="w-6 h-6 text-[var(--color-base-400)]" />
                                         </div>
-                                    ) : (
-                                        [...messages.map((m, i) => ({ id: `ws-${i}`, title: 'Live Update', message: m.message, is_read: false, created_at: new Date().toISOString(), type: 'DONOR_NEEDED' })), ...notifications].map((notification, i) => (
-                                            <motion.button
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: i * 0.05 + 0.1 }}
-                                                key={notification.id}
-                                                onClick={() => handleClick(notification as any)}
-                                                className={`w-full p-4 rounded-xl transition-colors text-left flex gap-4 ${!notification.is_read ? "bg-red-50 dark:bg-red-900/10" : "hover:bg-slate-50 dark:hover:bg-white/5"}`}
-                                            >
-                                                <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center shadow-inner mt-1 ${notification.type === "DONOR_NEEDED" ? "bg-red-100 dark:bg-red-500/20" : "bg-emerald-100 dark:bg-emerald-500/20"}`}>
-                                                    <span className="text-lg">
-                                                        {NOTIFICATION_ICONS[notification.type] ?? "🔔"}
-                                                    </span>
-                                                </div>
+                                        <p className="font-display font-bold text-[1rem] text-[var(--color-base-900)]">All clear</p>
+                                        <p className="text-[0.875rem] mt-1 text-[var(--color-base-500)]">No new notifications.</p>
+                                    </div>
+                                ) : (
+                                    [...messages.map((m, i) => ({ id: `ws-${i}`, title: 'Live Update', message: m.message, is_read: false, created_at: new Date().toISOString(), type: 'DONOR_NEEDED' })), ...notifications].map((notification, i) => (
+                                        <button
+                                            key={notification.id}
+                                            onClick={() => handleClick(notification as any)}
+                                            className={`w-full p-4 transition-colors text-left flex gap-3 border-b border-[var(--color-base-200)] last:border-b-0 ${!notification.is_read ? "bg-[var(--color-blood-light)]" : "hover:bg-[var(--color-base-50)]"}`}
+                                        >
+                                            <div className="flex-shrink-0 w-[32px] h-[32px] rounded-full flex items-center justify-center bg-white shadow-sm border border-[var(--color-base-200)] text-[1rem]">
+                                                {NOTIFICATION_ICONS[notification.type] ?? "🔔"}
+                                            </div>
 
-                                                <div className="flex-1 min-w-0 flex flex-col justify-center">
-                                                    <p className="font-semibold text-slate-900 dark:text-slate-100 text-[14px] leading-tight flex justify-between items-start gap-2">
-                                                        <span className="truncate">{notification.title}</span>
-                                                        {!notification.is_read && (
-                                                            <span className="flex-shrink-0 w-2 h-2 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.6)] mt-1.5" />
-                                                        )}
-                                                    </p>
-                                                    <p className="text-[13px] text-slate-600 dark:text-slate-400 mt-1 pb-1 line-clamp-2 leading-relaxed">
-                                                        {notification.message}
-                                                    </p>
-                                                    <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium">
-                                                        {formatDistanceToNow(new Date(notification.created_at), {
-                                                            addSuffix: true,
-                                                        })}
-                                                    </p>
-                                                </div>
-                                            </motion.button>
-                                        ))
-                                    )}
-                                </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-[0.875rem] text-[var(--color-base-900)] leading-tight mb-1 flex justify-between items-start gap-2">
+                                                    <span className="truncate">{notification.title}</span>
+                                                    {!notification.is_read && (
+                                                        <span className="flex-shrink-0 w-[6px] h-[6px] bg-[var(--color-blood)] rounded-full mt-1.5" />
+                                                    )}
+                                                </p>
+                                                <p className="text-[0.875rem] text-[var(--color-base-500)] line-clamp-2 leading-snug mb-1.5">
+                                                    {notification.message}
+                                                </p>
+                                                <p className="font-mono text-[0.75rem] text-[var(--color-base-400)]">
+                                                    {formatDistanceToNow(new Date(notification.created_at), {
+                                                        addSuffix: true,
+                                                    })}
+                                                </p>
+                                            </div>
+                                        </button>
+                                    ))
+                                )}
                             </div>
                         </motion.div>
                     </>
