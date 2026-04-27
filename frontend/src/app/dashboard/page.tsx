@@ -18,9 +18,7 @@ import { DonorAvailabilityToggle } from "@/components/DonorAvailabilityToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { RequestDetailDrawer } from "@/components/RequestDetailDrawer";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
-import { ImpactStats } from "@/components/dashboard/ImpactStats";
 import { BentoRequestCard } from "@/components/dashboard/BentoRequestCard";
-import { CommunityAnalytics } from "@/components/dashboard/CommunityAnalytics";
 import type { BloodRequest, User } from "@/types";
 
 type Tab = "donate" | "mine";
@@ -251,21 +249,8 @@ export default function DashboardPage() {
                         </div>
                     </div>
                     
-                    {/* Impact Score Card (Dark) */}
-                    <div className="lg:col-[5/9] lg:row-start-2">
-                        <ImpactStats 
-                            totalHelped={(profile as any)?.total_donations ?? 0} 
-                            points={((profile as any)?.total_donations ?? 0) * 100}
-                        />
-                    </div>
-
-                    {/* Community Analytics Card (Dark) */}
-                    <div className="lg:col-[9/13] lg:row-start-2">
-                        <CommunityAnalytics />
-                    </div>
-
                     {/* ROW 3: Active Requests Feed (12 cols) */}
-                    <div className="lg:col-[1/-1] lg:row-start-3 bg-white rounded-[var(--radius-card)] shadow-[var(--shadow-clay)] p-6 mt-4">
+                    <div className="lg:col-[5/13] lg:row-start-2 lg:row-span-2 bg-white rounded-[var(--radius-card)] shadow-[var(--shadow-clay)] p-6">
                         {/* Feed Header */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6 border-b border-[var(--color-base-200)] pb-4">
                             <div className="space-y-1">

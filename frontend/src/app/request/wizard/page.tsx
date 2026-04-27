@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
 import { RequestService } from '@/services/request.service';
-import { ArrowLeft, ArrowRight, Check, MapPin, ShieldAlert, Clock, Calendar, CheckCircle2, Phone, Send, Loader2, Navigation, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, MapPin, ShieldAlert, Clock, Calendar, CheckCircle2, Phone, Send, Loader2, Navigation, AlertTriangle, Sparkles, SkipForward } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Input } from '@/components/ui/Input';
@@ -19,14 +19,19 @@ export default function RequestWizardPage() {
     const router = useRouter();
     const { user } = useUser();
     
-    // We have 4 main steps + 1 optional OTP step
-    const [currentStep, setCurrentStep] = useState(1);
+    // Step 0 = AI parser, Steps 1-4 = wizard, Step 5 = OTP
+    const [currentStep, setCurrentStep] = useState(0);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [otpCode, setOtpCode] = useState('');
     const [isMockMode, setIsMockMode] = useState(false);
     const [gpsLocation, setGpsLocation] = useState<{lat: number, lng: number} | null>(null);
     const [gettingLocation, setGettingLocation] = useState(false);
+
+    // AI Parser state
+    const [aiInput, setAiInput] = useState('');
+    const [aiParsing, setAiParsing] = useState(false);
+    const [aiFilledFields, setAiFilledFields] = useState<Set<string>>(new Set());
 
     const [formData, setFormData] = useState({
         patient_name: '',
@@ -40,6 +45,45 @@ export default function RequestWizardPage() {
 
     const STEPS = ["Patient Info", "Blood Details", "Location", "Confirm"];
 
+    // AI Parse handler
+    const handleAiParse = async () => {
+        if (!aiInput.trim() || aiInput.trim().length < 5) {
+            setError('Please describe your emergency in a bit more detail.');
+            return;
+        }
+        setAiParsing(true);
+        setError(null);
+        try {
+            const res = await fetch('/api/ai/parse-request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: aiInput.trim() }),
+            });
+            const json = await res.json();
+            if (!res.ok) {
+                setError(json.error || 'AI parsing failed. You can fill the form manually.');
+                return;
+            }
+            const d = json.data;
+            const filled = new Set<string>();
+            const updates: Partial<typeof formData> = {};
+
+            if (d.blood_group) { updates.blood_group = d.blood_group; filled.add('blood_group'); }
+            if (d.urgency_level) { updates.urgency_level = d.urgency_level; filled.add('urgency_level'); }
+            if (d.hospital_name) { updates.hospital_name = d.hospital_name; filled.add('hospital_name'); }
+            if (d.units && d.units > 1) { updates.units = d.units; filled.add('units'); }
+            if (d.patient_name) { updates.patient_name = d.patient_name; filled.add('patient_name'); }
+
+            setFormData(prev => ({ ...prev, ...updates }));
+            setAiFilledFields(filled);
+            setCurrentStep(1);
+        } catch {
+            setError('Could not reach AI service. Please fill the form manually.');
+        } finally {
+            setAiParsing(false);
+        }
+    };
+
     const handleNext = () => {
         setError(null);
         if (currentStep < 5) setCurrentStep(currentStep + 1);
@@ -47,7 +91,7 @@ export default function RequestWizardPage() {
 
     const handleBack = () => {
         setError(null);
-        if (currentStep > 1) setCurrentStep(currentStep - 1);
+        if (currentStep > 0) setCurrentStep(currentStep - 1);
     };
 
     const handleGetLocation = () => {
@@ -180,7 +224,7 @@ export default function RequestWizardPage() {
                 </div>
 
                 {/* Step Pills */}
-                {currentStep <= 4 && (
+                {currentStep >= 1 && currentStep <= 4 && (
                     <div className="flex items-center justify-center gap-2 w-full max-w-3xl px-6">
                         {STEPS.map((step, idx) => {
                             const stepNum = idx + 1;
@@ -226,7 +270,66 @@ export default function RequestWizardPage() {
 
                 <div className="w-full">
                     <AnimatePresence mode="wait" custom={currentStep}>
-                        
+
+                        {/* STEP 0: AI PARSER */}
+                        {currentStep === 0 && (
+                            <motion.div key="step0" custom={0} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
+                                <div className="text-center mb-8">
+                                    <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-[20px] flex items-center justify-center shadow-lg">
+                                        <Sparkles className="w-8 h-8 text-white" />
+                                    </div>
+                                    <h2 className="font-display font-bold text-[1.5rem] text-[var(--color-base-900)] tracking-tight mb-2">
+                                        Describe Your Emergency
+                                    </h2>
+                                    <p className="text-[0.9375rem] text-[var(--color-base-500)] max-w-md mx-auto">
+                                        Type what you need in plain language. Our AI will extract the details and fill the form for you.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <textarea
+                                        value={aiInput}
+                                        onChange={(e) => setAiInput(e.target.value)}
+                                        placeholder='e.g. "Need O- blood urgently at Apollo Hospital for ICU patient, 2 units"'
+                                        rows={4}
+                                        className="w-full bg-white border-[1.5px] border-[var(--color-base-200)] rounded-[var(--radius-card)] shadow-[var(--shadow-clay)] p-4 text-[1rem] font-sans text-[var(--color-base-900)] placeholder:text-[var(--color-base-400)] focus:border-violet-500 focus:ring-[3px] focus:ring-violet-500/10 transition-all resize-none outline-none"
+                                        autoFocus
+                                    />
+
+                                    <button
+                                        onClick={handleAiParse}
+                                        disabled={aiParsing || aiInput.trim().length < 5}
+                                        className="w-full h-14 bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-bold text-[1rem] rounded-[var(--radius-pill)] shadow-lg hover:shadow-xl hover:-translate-y-px transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    >
+                                        {aiParsing ? (
+                                            <><Loader2 className="w-5 h-5 animate-spin" /> Parsing your request...</>
+                                        ) : (
+                                            <><Sparkles className="w-5 h-5" /> Parse with AI</>
+                                        )}
+                                    </button>
+
+                                    <div className="relative flex items-center justify-center my-2">
+                                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[var(--color-base-200)]" /></div>
+                                        <span className="relative bg-[var(--color-base-50)] px-4 text-[0.75rem] font-bold text-[var(--color-base-400)] uppercase tracking-widest">or</span>
+                                    </div>
+
+                                    <button
+                                        onClick={() => setCurrentStep(1)}
+                                        className="w-full h-12 bg-transparent border-[1.5px] border-[var(--color-base-200)] text-[var(--color-base-700)] font-bold text-[0.9375rem] rounded-[var(--radius-pill)] hover:border-[var(--color-base-500)] transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <SkipForward className="w-4 h-4" /> Skip, fill manually
+                                    </button>
+                                </div>
+
+                                {aiFilledFields.size > 0 && (
+                                    <div className="mt-6 p-4 bg-violet-50 border border-violet-200 rounded-[var(--radius-card)] text-[0.875rem] text-violet-700 font-medium">
+                                        <Sparkles className="w-4 h-4 inline mr-1.5" />
+                                        AI filled {aiFilledFields.size} field{aiFilledFields.size > 1 ? 's' : ''}. Review them in the next steps.
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+
                         {/* STEP 1: PATIENT INFO */}
                         {currentStep === 1 && (
                             <motion.div key="step1" custom={1} variants={slideVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.3 }}>
@@ -234,7 +337,10 @@ export default function RequestWizardPage() {
                                 
                                 <div className="space-y-6">
                                     <div>
-                                        <label className="block text-[0.875rem] font-bold text-[var(--color-base-900)] mb-2">Hospital Name</label>
+                                        <label className="block text-[0.875rem] font-bold text-[var(--color-base-900)] mb-2">
+                                            Hospital Name
+                                            {aiFilledFields.has('hospital_name') && <span className="ml-2 text-[0.625rem] font-mono text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded uppercase">AI filled</span>}
+                                        </label>
                                         <LocationAutocomplete
                                             placeholder="Start typing hospital name..."
                                             value={formData.hospital_name}
@@ -245,7 +351,10 @@ export default function RequestWizardPage() {
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-[0.875rem] font-bold text-[var(--color-base-900)] mb-2">Patient Name</label>
+                                            <label className="block text-[0.875rem] font-bold text-[var(--color-base-900)] mb-2">
+                                                Patient Name
+                                                {aiFilledFields.has('patient_name') && <span className="ml-2 text-[0.625rem] font-mono text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded uppercase">AI filled</span>}
+                                            </label>
                                             <Input
                                                 type="text"
                                                 placeholder="e.g. John Doe"
@@ -276,7 +385,10 @@ export default function RequestWizardPage() {
                                 
                                 <div className="space-y-8">
                                     <div>
-                                        <label className="block text-[0.875rem] font-bold text-[var(--color-base-900)] mb-3">Blood Group Needed</label>
+                                        <label className="block text-[0.875rem] font-bold text-[var(--color-base-900)] mb-3">
+                                            Blood Group Needed
+                                            {aiFilledFields.has('blood_group') && <span className="ml-2 text-[0.625rem] font-mono text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded uppercase">AI filled</span>}
+                                        </label>
                                         <div className="grid grid-cols-4 gap-3">
                                             {BLOOD_GROUPS.map((group) => {
                                                 const isSelected = formData.blood_group === group;
@@ -495,12 +607,14 @@ export default function RequestWizardPage() {
                 <div className="w-full max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
                     <button 
                         onClick={handleBack} 
-                        className={`text-[0.875rem] font-bold px-4 py-2 rounded-[var(--radius-pill)] transition-colors hover:bg-[var(--color-base-50)] text-[var(--color-base-500)] ${currentStep === 1 ? 'invisible' : ''}`}
+                        className={`text-[0.875rem] font-bold px-4 py-2 rounded-[var(--radius-pill)] transition-colors hover:bg-[var(--color-base-50)] text-[var(--color-base-500)] ${currentStep <= 0 ? 'invisible' : ''}`}
                     >
                         Back
                     </button>
 
-                    {currentStep < 4 ? (
+                    {currentStep === 0 ? (
+                        <div /> /* Step 0 has its own buttons */
+                    ) : currentStep < 4 ? (
                         <button
                             onClick={handleNext}
                             disabled={isNextDisabled()}

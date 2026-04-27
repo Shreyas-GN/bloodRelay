@@ -42,9 +42,9 @@ export function ImpactStats({ totalHelped = 0, points = 0, level = "Bronze Savio
 
             <div className="grid grid-cols-3 gap-2 mb-6 relative z-10">
                 <div className="bg-zinc-800/50 rounded-xl p-3 flex flex-col items-center justify-center border border-zinc-700/50">
-                    <Flame className="w-4 h-4 text-orange-500 mb-1" />
+                    <Flame className="w-4 h-4 text-zinc-500 mb-1" />
                     <span className="text-[10px] text-zinc-400 font-mono uppercase">Streak</span>
-                    <span className="font-bold text-sm">3 Mos</span>
+                    <span className="font-bold text-sm">0 Days</span>
                 </div>
                 <div className="bg-zinc-800/50 rounded-xl p-3 flex flex-col items-center justify-center border border-zinc-700/50">
                     <Zap className="w-4 h-4 text-amber-400 mb-1" />
@@ -52,9 +52,9 @@ export function ImpactStats({ totalHelped = 0, points = 0, level = "Bronze Savio
                     <span className="font-bold text-sm">{points}</span>
                 </div>
                 <div className="bg-zinc-800/50 rounded-xl p-3 flex flex-col items-center justify-center border border-zinc-700/50">
-                    <MapPin className="w-4 h-4 text-emerald-400 mb-1" />
+                    <MapPin className="w-4 h-4 text-zinc-500 mb-1" />
                     <span className="text-[10px] text-zinc-400 font-mono uppercase">Rank</span>
-                    <span className="font-bold text-sm">#42</span>
+                    <span className="font-bold text-sm">---</span>
                 </div>
             </div>
 
