@@ -1,6 +1,8 @@
 # 🩸 PulseAid
 ### **The AI-Powered Emergency Blood Command Center**
 
+![PulseAid Landing Page](./frontend/public/hero-screenshot.png)
+
 PulseAid is a project I built to solve a problem that hits home for many: the chaotic, frantic search for blood donors during medical emergencies. 
 
 Instead of relying on scattered WhatsApp forwards and hoping for a miracle, PulseAid is a high-speed, direct coordination platform that connects families with compatible donors in their immediate vicinity. No noise, no spam—just action when every second counts.
