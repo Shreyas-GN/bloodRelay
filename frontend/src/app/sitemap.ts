@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://pulse-aid.netlify.app';
+  const baseUrl = 'https://bloodreach.netlify.app';
 
   return [
     {

@@ -1,291 +1,227 @@
 "use client";
 
 import Link from "next/link";
-import { Droplet, ArrowRight, Github, MapPin, Bell, Phone, Heart, Shield, Zap, CheckCircle, AlertTriangle } from "lucide-react";
+import { Droplet, Shield, Clock, MapPin, Phone, Activity } from "lucide-react";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import { motion } from "framer-motion";
-
-const fade = {
-  hidden: { opacity: 0, y: 14 },
-  show: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.5, delay: i * 0.08, ease: "easeOut" as const },
-  }),
-};
 
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-[var(--color-base-50)] text-[var(--color-base-900)] font-sans">
-      <div className="fixed inset-0 pointer-events-none z-[-1]" style={{ background: 'radial-gradient(ellipse at 70% 50%, rgba(192,57,43,0.04) 0%, transparent 60%)' }} />
-      {/* Global Noise is applied via globals.css body::before */}
-
       {/* ── Nav ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 bg-[rgba(255,255,255,0.85)] backdrop-blur-[12px] border-b border-[var(--color-base-200)] h-[56px] w-full flex justify-center">
-        <nav className="w-full max-w-[1280px] px-6 h-full flex items-center justify-between">
+      <header className="sticky top-0 z-50 bg-[rgba(250,250,250,0.85)] backdrop-blur-md border-b border-[var(--color-base-200)] h-16 w-full flex justify-center">
+        <nav className="w-full max-w-[1200px] px-6 h-full flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 outline-none">
             <Droplet className="w-5 h-5 fill-[var(--color-blood)] stroke-[var(--color-blood)]" />
-            <span className="text-[1.125rem] font-bold tracking-[-0.05em] font-display text-[var(--color-base-900)]">PulseAid</span>
+            <span className="text-lg font-semibold tracking-tight text-[var(--color-base-900)]">BloodReach</span>
           </Link>
 
-          <div className="flex items-center gap-4 text-sm font-medium">
+          <div className="flex items-center gap-6 text-sm font-medium">
             <SignedIn>
-              <Link href="/dashboard" className="text-[var(--color-base-700)] hover:text-[var(--color-base-900)] transition-colors hover:underline">
+              <Link href="/dashboard" className="text-[var(--color-base-700)] hover:text-[var(--color-base-900)] transition-colors">
                 Dashboard
-              </Link>
-              <Link
-                href="/emergency"
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-[var(--color-blood)] text-white rounded-[var(--radius-pill)] text-sm font-bold shadow-[var(--shadow-clay-hard)] hover:-translate-y-px transition-transform animate-pulse"
-              >
-                <AlertTriangle className="w-4 h-4" />
-                NEED BLOOD NOW
               </Link>
               <div className="relative group">
                 <UserButton
                   afterSignOutUrl="/"
-                  appearance={{ elements: { avatarBox: "w-8 h-8 rounded-full border-2 border-[var(--color-blood)]" } }}
+                  appearance={{ elements: { avatarBox: "w-8 h-8 rounded-full border border-[var(--color-base-200)]" } }}
                 />
               </div>
             </SignedIn>
             <SignedOut>
-              <Link href="/sign-in" className="text-[var(--color-base-700)] hover:text-[var(--color-base-900)] transition-colors hover:underline">
+              <Link href="/sign-in" className="text-[var(--color-base-700)] hover:text-[var(--color-base-900)] transition-colors">
                 Sign in
               </Link>
               <Link
-                href="/emergency"
-                className="px-4 py-1.5 bg-[var(--color-blood)] text-white rounded-[var(--radius-pill)] text-sm font-bold shadow-[var(--shadow-clay-hard)] hover:-translate-y-px transition-transform animate-pulse"
+                href="/sign-up"
+                className="btn-secondary py-2"
               >
-                NEED BLOOD NOW
+                Register
               </Link>
             </SignedOut>
           </div>
         </nav>
       </header>
 
-      <main className="flex-1 relative z-10 w-full flex flex-col items-center">
+      <main className="flex-1 w-full flex flex-col items-center">
 
-        {/* ── Hero ─────────────────────────────────────────── */}
-        <section className="w-full max-w-[1280px] px-6 pt-[80px] pb-[120px] w-full">
-          <motion.div variants={fade} initial="hidden" animate="show" custom={0} className="space-y-6 max-w-[720px] mx-auto text-center flex flex-col items-center">
+        {/* ── SECTION 1: HERO ─────────────────────────────────────────── */}
+        <section className="w-full max-w-[1200px] px-6 py-24 md:py-32 flex flex-col items-center text-center">
+          <h1 className="max-w-[800px] mb-6">
+            Real-time blood coordination <br className="hidden md:block"/>
+            for <span className="text-[var(--color-blood)]">critical emergencies.</span>
+          </h1>
+          
+          <p className="max-w-[640px] text-lg md:text-xl text-[var(--color-base-500)] mb-10">
+            A direct, zero-delay platform connecting people in urgent need with matching blood donors nearby. No middlemen, just immediate connection.
+          </p>
 
-            {/* Urgency tag */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-[var(--color-blood-light)] rounded-[var(--radius-pill)]">
-              <span className="w-2 h-2 rounded-full bg-[var(--color-blood)] animate-pulse" />
-              <span className="text-[0.625rem] font-bold text-[var(--color-blood)] tracking-widest uppercase font-mono">EMERGENCY BLOOD COORDINATION</span>
-            </div>
-
-            <h1 className="font-display text-[clamp(2.5rem,6vw,5rem)] tracking-[-0.05em] leading-[1.05] text-[var(--color-base-900)] font-bold">
-              Find blood donors<br />
-              <span className="text-[var(--color-blood)]">near you.</span> <span className="font-bold text-[var(--color-base-900)]">Fast.</span>
-            </h1>
-
-            <p className="text-[1.0625rem] text-[var(--color-base-500)] max-w-[520px] font-sans">
-              Post a request. Compatible donors within 20 km get notified. They respond. You coordinate directly by phone. No middlemen, no delays.
-            </p>
-
-            {/* CTAs */}
-            <motion.div variants={fade} initial="hidden" animate="show" custom={2} className="flex flex-col sm:flex-row gap-3 pt-[40px] w-full sm:w-auto items-center">
-              <div className="flex flex-col items-center gap-4 w-full">
-                <Link
-                  href="/emergency"
-                  className="w-full sm:w-auto inline-flex items-center justify-center px-[32px] py-[16px] bg-[var(--color-blood)] text-white font-display font-bold rounded-[var(--radius-pill)] shadow-[0_20px_50px_rgba(192,57,43,0.3)] hover:-translate-y-1 active:translate-y-px transition-all text-[1.125rem] border-2 border-white/20"
-                >
-                  <AlertTriangle className="w-5 h-5 mr-2" />
-                  NEED BLOOD NOW (Emergency)
-                </Link>
-                <div className="flex items-center gap-4">
-                  <Link
-                    href="/dashboard"
-                    className="text-[var(--color-base-700)] hover:text-[var(--color-blood)] hover:underline transition-colors text-[1rem] font-medium"
-                  >
-                    View active requests
-                  </Link>
-                  <span className="text-zinc-300">|</span>
-                  <Link
-                    href="/sign-up"
-                    className="text-[var(--color-base-700)] hover:text-[var(--color-blood)] hover:underline transition-colors text-[1rem] font-medium"
-                  >
-                    Register as a donor
-                  </Link>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+            <Link
+              href="/emergency"
+              className="btn-primary flex items-center justify-center gap-2 text-lg px-8 py-4"
+            >
+              Request Blood
+            </Link>
+            <Link
+              href="/sign-up"
+              className="btn-secondary flex items-center justify-center gap-2 text-lg px-8 py-4"
+            >
+              Become a Donor
+            </Link>
+          </div>
+          
+          <div className="mt-8 flex items-center gap-2 text-sm text-[var(--color-base-500)]">
+            <Shield className="w-4 h-4" />
+            <span>Secure, verified, and strictly for medical emergencies.</span>
+          </div>
         </section>
 
-        {/* ── How It Works ─────────────────────────────────── */}
-        <section className="bg-[var(--color-base-50)] rounded-t-[var(--radius-section)] w-full py-[80px]">
-          <div className="max-w-[1280px] mx-auto px-6 w-full">
-            <motion.p
-              variants={fade} initial="hidden" whileInView="show" viewport={{ once: true }} custom={0}
-              className="text-[0.75rem] font-bold font-mono uppercase tracking-[0.1em] text-[var(--color-base-500)] mb-[48px] text-center"
-            >
-              HOW IT WORKS
-            </motion.p>
+        {/* ── SECTION 2: CONTEXT (PROBLEM) ─────────────────────────────────── */}
+        <section className="w-full bg-[var(--color-white)] border-y border-[var(--color-base-200)] py-20 md:py-28 flex justify-center">
+          <div className="w-full max-w-[720px] px-6 flex flex-col">
+            <h2 className="mb-6">When seconds matter, social media isn't enough.</h2>
+            <p className="text-lg text-[var(--color-base-700)] mb-6">
+              During a medical emergency, families often resort to broadcasting desperate appeals across social networks. This approach is chaotic, slow, and overwhelming for people already under extreme stress.
+            </p>
+            <p className="text-lg text-[var(--color-base-700)]">
+              BloodReach replaces panic with a precise coordination system. We instantly notify only compatible, nearby donors who have actively opted in to help—turning a frantic broadcast into a targeted, actionable request.
+            </p>
+          </div>
+        </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-              {/* Connector line on desktop */}
-              <div className="hidden md:block absolute top-[56px] left-[16%] right-[16%] border-t-[1.5px] border-dashed border-[var(--color-base-200)] z-0" />
+        {/* ── SECTION 3: HOW IT WORKS ─────────────────────────────────── */}
+        <section className="w-full max-w-[1200px] px-6 py-24 md:py-32">
+          <div className="text-center mb-16">
+            <h2 className="mb-4">How it works</h2>
+            <p className="max-w-[600px] mx-auto text-[var(--color-base-500)]">A streamlined process designed for speed and clarity during critical moments.</p>
+          </div>
 
-              {[
-                {
-                  n: "01",
-                  title: "Post your need",
-                  detail: "Blood group, hospital name, units needed, your phone. Takes 60 seconds.",
-                  icon: Zap,
-                  bg: "bg-[var(--color-blood-light)]",
-                  stroke: "stroke-[var(--color-blood)]"
-                },
-                {
-                  n: "02",
-                  title: "Donors get pinged",
-                  detail: "Only matching donors within 20 km who've opted in receive an alert. No spam.",
-                  icon: Bell,
-                  bg: "bg-[var(--color-warn-light)]",
-                  stroke: "stroke-[var(--color-warn)]"
-                },
-                {
-                  n: "03",
-                  title: "You connect directly",
-                  detail: "An accepting donor's name and phone appear. You call them. Done.",
-                  icon: Phone,
-                  bg: "bg-[var(--color-safe-light)]",
-                  stroke: "stroke-[var(--color-safe)]"
-                },
-              ].map((step, i) => {
-                const Icon = step.icon;
-                return (
-                  <motion.div
-                    key={step.n}
-                    variants={fade} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i + 1}
-                    className="relative z-10 bg-white border-[1.5px] border-[var(--color-base-200)] rounded-[var(--radius-card)] p-[32px] shadow-[var(--shadow-clay)] flex flex-col items-center text-center group hover:border-[var(--color-blood)] transition-colors"
-                  >
-                    <div className={`w-[48px] h-[48px] rounded-full flex items-center justify-center ${step.bg}`}>
-                      <Icon className={`w-6 h-6 ${step.stroke} fill-none`} />
-                    </div>
-                    <span className="font-mono text-[0.75rem] text-[var(--color-base-500)] block mt-[20px]">{step.n}</span>
-                    <h3 className="font-display font-bold text-[1.125rem] text-[var(--color-base-900)] mt-[8px]">{step.title}</h3>
-                    <p className="font-sans text-[0.9375rem] text-[var(--color-base-500)] mt-2">{step.detail}</p>
-                  </motion.div>
-                );
-              })}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="card-minimal flex flex-col items-start">
+              <div className="w-12 h-12 rounded-full border border-[var(--color-base-200)] flex items-center justify-center mb-6">
+                <Activity className="w-5 h-5 text-[var(--color-base-700)]" />
+              </div>
+              <h3 className="mb-3 text-xl">1. Post a request</h3>
+              <p className="text-[var(--color-base-500)]">
+                Provide the blood group, location, and urgency. Takes less than a minute.
+              </p>
+            </div>
+
+            <div className="card-minimal flex flex-col items-start">
+              <div className="w-12 h-12 rounded-full border border-[var(--color-base-200)] flex items-center justify-center mb-6">
+                <MapPin className="w-5 h-5 text-[var(--color-base-700)]" />
+              </div>
+              <h3 className="mb-3 text-xl">2. Local donors alerted</h3>
+              <p className="text-[var(--color-base-500)]">
+                Our system instantly pings only matching, available donors within a 20km radius.
+              </p>
+            </div>
+
+            <div className="card-minimal flex flex-col items-start">
+              <div className="w-12 h-12 rounded-full border border-[var(--color-base-200)] flex items-center justify-center mb-6">
+                <Phone className="w-5 h-5 text-[var(--color-base-700)]" />
+              </div>
+              <h3 className="mb-3 text-xl">3. Connect directly</h3>
+              <p className="text-[var(--color-base-500)]">
+                When a donor accepts, you receive their contact details to coordinate arrival.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* ── Feature Split ─────────────────────────────────── */}
-        <section className="bg-white w-full">
-          <div className="max-w-[1280px] mx-auto px-6 py-20">
-            <motion.p
-              variants={fade} initial="hidden" whileInView="show" viewport={{ once: true }}
-              className="text-[0.75rem] font-bold font-mono uppercase tracking-[0.1em] text-[var(--color-base-500)] mb-[48px] text-center"
-            >
-              WHAT YOU GET
-            </motion.p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-stretch">
-              {/* Requesters */}
-              <motion.div
-                variants={fade} initial="hidden" whileInView="show" viewport={{ once: true }} custom={0}
-                className="bg-white border-[1.5px] border-[var(--color-base-200)] rounded-[var(--radius-card)] shadow-[var(--shadow-clay)] p-[32px] flex flex-col h-full"
-              >
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="w-[48px] h-[48px] rounded-full bg-[var(--color-blood-light)] flex items-center justify-center">
-                    <Droplet className="w-5 h-5 fill-none stroke-[var(--color-blood)]" />
-                  </div>
-                  <div>
-                    <h3 className="font-display font-bold text-[1.125rem] text-[var(--color-base-900)]">For people who need blood</h3>
-                    <p className="font-mono text-[0.75rem] text-[var(--color-base-500)] mt-1 uppercase tracking-widest">Requesters</p>
-                  </div>
+        {/* ── SECTION 4: DIFFERENTIATION ─────────────────────────────────── */}
+        <section className="w-full bg-[var(--color-white)] border-y border-[var(--color-base-200)] py-24 md:py-32">
+          <div className="w-full max-w-[1200px] mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-16 items-start">
+            <div className="flex flex-col">
+              <h2 className="mb-6">Built for precision,<br />not engagement.</h2>
+              <p className="text-lg text-[var(--color-base-700)]">
+                BloodReach is engineered strictly for utility. There are no feeds, no likes, and no unnecessary notifications. Just a reliable protocol to bridge the gap between supply and urgent demand.
+              </p>
+            </div>
+            
+            <div className="flex flex-col gap-8">
+              <div className="flex gap-4">
+                <Clock className="w-6 h-6 text-[var(--color-blood)] shrink-0" />
+                <div>
+                  <h3 className="text-lg mb-2">Zero-delay routing</h3>
+                  <p className="text-[var(--color-base-500)]">No administrative bottlenecks. Requests are routed directly to eligible individuals immediately.</p>
                 </div>
-                <ul className="space-y-4 mb-8 flex-1">
-                  {[
-                    "GPS-tagged requests so donors know exactly where to go",
-                    "Real-time responses — see who accepted and when",
-                    "Direct phone contact, no platform messaging",
-                    "Map + one-tap directions to the hospital",
-                    "Edit or cancel your request anytime",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 font-sans text-[0.9375rem] text-[var(--color-base-700)]">
-                      <div className="mt-0.5 bg-[var(--color-safe-light)] rounded-full p-[2px] shrink-0">
-                        <Droplet className="w-[12px] h-[12px] fill-[var(--color-safe)] stroke-none" />
-                      </div>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
-
-              {/* Donors */}
-              <motion.div
-                variants={fade} initial="hidden" whileInView="show" viewport={{ once: true }} custom={1}
-                className="bg-white border-[1.5px] border-[var(--color-base-200)] rounded-[var(--radius-card)] shadow-[var(--shadow-clay)] p-[32px] flex flex-col h-full"
-              >
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="w-[48px] h-[48px] rounded-full bg-[var(--color-safe-light)] flex items-center justify-center">
-                    <Heart className="w-5 h-5 fill-none stroke-[var(--color-safe)]" />
-                  </div>
-                  <div>
-                    <h3 className="font-display font-bold text-[1.125rem] text-[var(--color-base-900)]">For people who want to donate</h3>
-                    <p className="font-mono text-[0.75rem] text-[var(--color-base-500)] mt-1 uppercase tracking-widest">Donors</p>
-                  </div>
+              </div>
+              <div className="flex gap-4">
+                <Shield className="w-6 h-6 text-[var(--color-blood)] shrink-0" />
+                <div>
+                  <h3 className="text-lg mb-2">Privacy focused</h3>
+                  <p className="text-[var(--color-base-500)]">Contact information is only shared when a specific emergency request is actively accepted.</p>
                 </div>
-                <ul className="space-y-4 mb-8 flex-1">
-                  {[
-                    "Only alerted for your blood group — no irrelevant pings",
-                    "Requests within 20 km of your location only",
-                    "One tap to accept. Then call directly.",
-                    "Toggle availability on/off whenever you need to",
-                    "Automatic cooldown after you've donated",
-                  ].map((item) => (
-                    <li key={item} className="flex items-start gap-3 font-sans text-[0.9375rem] text-[var(--color-base-700)]">
-                      <div className="mt-0.5 bg-[var(--color-safe-light)] rounded-full p-[2px] shrink-0">
-                        <Droplet className="w-[12px] h-[12px] fill-[var(--color-safe)] stroke-none" />
-                      </div>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </motion.div>
+              </div>
+              <div className="flex gap-4">
+                <MapPin className="w-6 h-6 text-[var(--color-blood)] shrink-0" />
+                <div>
+                  <h3 className="text-lg mb-2">Hyper-local matching</h3>
+                  <p className="text-[var(--color-base-500)]">We filter by geographic proximity to ensure donors can actually reach the hospital in time.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── SECTION 5: HUMAN / TRUST LAYER ─────────────────────────────────── */}
+        <section className="w-full max-w-[800px] mx-auto px-6 py-32 text-center">
+          <h2 className="mb-6 text-2xl md:text-3xl font-medium">Technology in service of life.</h2>
+          <p className="text-xl text-[var(--color-base-700)] leading-relaxed">
+            We believe that finding blood in an emergency shouldn't rely on luck or the size of your social network. It is a logistical problem that can be solved with the right coordination infrastructure. BloodReach exists to provide that infrastructure.
+          </p>
+        </section>
+
+        {/* ── SECTION 6: DONOR CTA BLOCK ─────────────────────────────────── */}
+        <section className="w-full bg-[var(--color-base-100)] py-24 md:py-32">
+          <div className="w-full max-w-[800px] mx-auto px-6 text-center">
+            <h2 className="mb-4">Your presence matters.</h2>
+            <p className="text-lg text-[var(--color-base-600)] mb-10 max-w-[600px] mx-auto">
+              By registering as a donor, you provide a silent safety net for your city. You will only be contacted when someone near you is in genuine need.
+            </p>
+            <Link href="/sign-up" className="btn-secondary px-8 py-3 text-lg">
+              Register as a Donor
+            </Link>
+          </div>
+        </section>
+
+        {/* ── SECTION 7: FINAL CTA ─────────────────────────────────── */}
+        <section className="w-full bg-[var(--color-white)] py-24 md:py-32 border-t border-[var(--color-base-200)]">
+          <div className="w-full max-w-[1200px] mx-auto px-6 text-center flex flex-col items-center">
+            <h2 className="mb-8">Access the coordination platform.</h2>
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+              <Link href="/emergency" className="btn-primary px-8 py-4 text-lg">
+                Request Blood
+              </Link>
+              <Link href="/sign-up" className="btn-secondary px-8 py-4 text-lg">
+                Become a Donor
+              </Link>
             </div>
           </div>
         </section>
 
       </main>
 
-      {/* ── Footer ─────────────────────────────────────────── */}
-      <footer className="bg-[var(--color-base-900)] text-white py-12">
-        <div className="max-w-[1280px] mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-[rgba(255,255,255,0.1)]">
+      {/* ── SECTION 8: FOOTER ─────────────────────────────────────────── */}
+      <footer className="w-full bg-[var(--color-base-900)] text-[var(--color-base-500)] py-16">
+        <div className="w-full max-w-[1200px] mx-auto px-6">
+          <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8 mb-12">
             <div className="flex items-center gap-2">
               <Droplet className="w-5 h-5 fill-[var(--color-blood)] stroke-[var(--color-blood)]" />
-              <span className="text-[1.125rem] font-bold tracking-[-0.05em] font-display">PulseAid</span>
+              <span className="text-lg font-semibold tracking-tight text-white">BloodReach</span>
             </div>
             
-            <div className="flex flex-wrap justify-center md:justify-end gap-3">
-              <span className="flex items-center gap-2 px-4 py-1.5 border border-[rgba(255,255,255,0.15)] rounded-[var(--radius-pill)] text-[0.75rem] font-mono text-white/80">
-                <MapPin className="w-3.5 h-3.5" />
-                Bangalore-based
-                <span className="w-1 h-1 bg-[var(--color-blood)] rounded-full ml-1" />
-              </span>
-              <a href="https://github.com/Shreyas-GN/Pulse-Aid" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-1.5 border border-[rgba(255,255,255,0.15)] rounded-[var(--radius-pill)] text-[0.75rem] font-mono text-white/80 hover:bg-white/5 transition-colors">
-                <Github className="w-3.5 h-3.5" />
-                Open source
-                <span className="w-1 h-1 bg-[var(--color-blood)] rounded-full ml-1" />
-              </a>
-              <span className="flex items-center gap-2 px-4 py-1.5 border border-[rgba(255,255,255,0.15)] rounded-[var(--radius-pill)] text-[0.75rem] font-mono text-white/80">
-                <Shield className="w-3.5 h-3.5" />
-                Free forever · No ads
-              </span>
+            <div className="flex gap-8 text-sm">
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+              <a href="mailto:contact@bloodreach.org" className="hover:text-white transition-colors">Contact</a>
             </div>
           </div>
           
-          <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[0.75rem] font-bold font-mono text-[var(--color-base-500)] tracking-[0.1em] uppercase">
-            <span>© 2026 PulseAid</span>
-            <div className="flex items-center gap-6">
-              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-            </div>
+          <div className="text-center md:text-left text-sm border-t border-[rgba(255,255,255,0.1)] pt-8">
+            <p className="mb-4">Disclaimer: BloodReach is a coordination platform and does not provide medical services, professional medical advice, diagnosis, or treatment.</p>
+            <p>&copy; {new Date().getFullYear()} BloodReach. All rights reserved.</p>
           </div>
         </div>
       </footer>

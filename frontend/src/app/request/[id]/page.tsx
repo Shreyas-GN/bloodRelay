@@ -499,7 +499,7 @@ export default function RequestDetailPage() {
                     {/* Safety Notice */}
                     <div className="flex items-start gap-3 mt-8 p-4 rounded-xl text-xs font-medium text-zinc-500 bg-zinc-100 dark:bg-white/5">
                         <Shield className="w-4 h-4 shrink-0 text-zinc-400" />
-                        <p>Pulse-Aid does not screen donors or verify medical history. Please coordinate with your medical professional before proceeding with any donations.</p>
+                        <p>BloodReach does not screen donors or verify medical history. Please coordinate with your medical professional before proceeding with any donations.</p>
                     </div>
 
                 </motion.div>

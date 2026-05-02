@@ -176,7 +176,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-6">
                         <Link href="/" className="flex items-center gap-2 outline-none">
                             <Droplet className="w-5 h-5 fill-[var(--color-blood)] stroke-[var(--color-blood)]" />
-                            <span className="text-[1.125rem] font-bold tracking-[-0.05em] font-display text-[var(--color-base-900)]">PulseAid</span>
+                            <span className="text-[1.125rem] font-bold tracking-[-0.05em] font-display text-[var(--color-base-900)]">BloodReach</span>
                         </Link>
                         
                         <div className="hidden md:flex items-center gap-2 bg-[var(--color-base-50)] border border-[var(--color-base-200)] px-3 py-1 rounded-[var(--radius-pill)]">

@@ -13,6 +13,6 @@ export default function robots(): MetadataRoute.Robots {
         '/api/',
       ],
     },
-    sitemap: 'https://pulse-aid.netlify.app/sitemap.xml',
+    sitemap: 'https://bloodreach.netlify.app/sitemap.xml',
   };
 }

@@ -22,27 +22,27 @@ const spaceMono = Space_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "PulseAid | Emergency Blood Coordination Platform",
-    template: "%s | PulseAid"
+    default: "BloodReach | Emergency Blood Coordination Platform",
+    template: "%s | BloodReach"
   },
-  description: "PulseAid connects blood donors with families in urgent need within seconds. No delays, no middlemen—just direct, life-saving coordination.",
+  description: "BloodReach connects blood donors with families in urgent need within seconds. No delays, no middlemen—just direct, life-saving coordination.",
   keywords: ["blood donation", "emergency blood", "find blood donor", "blood bank", "emergency coordination", "donate blood"],
-  authors: [{ name: "PulseAid Team" }],
-  metadataBase: new URL("https://pulse-aid.netlify.app"),
+  authors: [{ name: "BloodReach Team" }],
+  metadataBase: new URL("https://bloodreach.netlify.app"),
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "PulseAid | Emergency Blood Coordination",
+    title: "BloodReach | Emergency Blood Coordination",
     description: "Bridging the gap between donors and those in need. Fast, trusted, and free.",
-    url: "https://pulse-aid.netlify.app",
-    siteName: "PulseAid",
+    url: "https://bloodreach.netlify.app",
+    siteName: "BloodReach",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "PulseAid - Emergency Blood Coordination",
+        alt: "BloodReach - Emergency Blood Coordination",
       },
     ],
     locale: "en_US",
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "PulseAid | Find Blood Donors Near You",
+    title: "BloodReach | Find Blood Donors Near You",
     description: "Connect with matching blood donors in seconds during emergencies.",
     images: ["/og-image.png"],
   },
@@ -64,9 +64,9 @@ export const metadata: Metadata = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "EmergencyService",
-  "name": "PulseAid",
-  "url": "https://pulse-aid.netlify.app",
-  "logo": "https://pulse-aid.netlify.app/logo.png",
+  "name": "BloodReach",
+  "url": "https://bloodreach.netlify.app",
+  "logo": "https://bloodreach.netlify.app/logo.png",
   "description": "Connecting blood donors with recipients in real-time emergency situations.",
   "address": {
     "@type": "PostalAddress",
@@ -76,7 +76,7 @@ const jsonLd = {
   "contactPoint": {
     "@type": "ContactPoint",
     "contactType": "Emergency Blood Support",
-    "url": "https://pulse-aid.netlify.app/emergency"
+    "url": "https://bloodreach.netlify.app/emergency"
   }
 };
 

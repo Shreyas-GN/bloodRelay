@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
         description,
         type: 'article',
         publishedTime: request.created_at,
-        authors: ['PulseAid'],
+        authors: ['BloodReach'],
       },
       twitter: {
         card: 'summary_large_image',
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
     };
   } catch (error) {
     return {
-      title: 'Emergency Blood Request | PulseAid',
+      title: 'Emergency Blood Request | BloodReach',
     };
   }
 }

@@ -4,7 +4,7 @@ import Groq from "groq-sdk";
 const VALID_BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 const VALID_URGENCY = ["IMMEDIATE", "TODAY", "SCHEDULED"];
 
-const SYSTEM_PROMPT = `You are a medical emergency request parser for an Indian blood donation platform called PulseAid. 
+const SYSTEM_PROMPT = `You are a medical emergency request parser for an Indian blood donation platform called BloodReach. 
 
 Extract structured data from the user's free-text emergency blood request. 
 

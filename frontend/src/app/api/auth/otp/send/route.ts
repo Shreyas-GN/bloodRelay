@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
         // Send OTP via Telegram (since it's our free messaging provider)
         await TelegramService.sendMessage(
-            `🔐 *PulseAid Verification Code*\n\nYour OTP is: *${otp}*\n\n_Valid for 10 minutes. Do not share this code._`
+            `🔐 *BloodReach Verification Code*\n\nYour OTP is: *${otp}*\n\n_Valid for 10 minutes. Do not share this code._`
         );
 
         // In production: send to user's Telegram DM via their chat_id
