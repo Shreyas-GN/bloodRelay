@@ -22,12 +22,13 @@ export function BentoRequestCard({ request, onClick, onAccept, isAccepting, isAc
     const urgency = URGENCY_STYLES[request.urgency_level ?? ""] ?? { bg: "bg-zinc-100", text: "text-zinc-900", label: "Standard" };
 
     return (
-        <motion.div
+        <motion.article
             layout
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             className="bento-item group cursor-pointer"
             onClick={onClick}
+            aria-label={`Emergency blood request for ${request.blood_group} at ${request.hospital_name}`}
         >
             <div className="clay-card clay-card-hover p-6 h-full flex flex-col">
                 <div className="flex items-start justify-between mb-6">
@@ -106,6 +107,6 @@ export function BentoRequestCard({ request, onClick, onAccept, isAccepting, isAc
                     )}
                 </div>
             </div>
-        </motion.div>
+        </motion.article>
     );
 }

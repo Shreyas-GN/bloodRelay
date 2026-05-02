@@ -21,9 +21,63 @@ const spaceMono = Space_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pulse Aid - Emergency Blood, Handled Calmly",
-  description: "Bridging the gap between donors and those in need. Simple, fast, and trusted.",
+  title: {
+    default: "PulseAid | Emergency Blood Coordination Platform",
+    template: "%s | PulseAid"
+  },
+  description: "PulseAid connects blood donors with families in urgent need within seconds. No delays, no middlemen—just direct, life-saving coordination.",
+  keywords: ["blood donation", "emergency blood", "find blood donor", "blood bank", "emergency coordination", "donate blood"],
+  authors: [{ name: "PulseAid Team" }],
+  metadataBase: new URL("https://pulse-aid.netlify.app"),
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "PulseAid | Emergency Blood Coordination",
+    description: "Bridging the gap between donors and those in need. Fast, trusted, and free.",
+    url: "https://pulse-aid.netlify.app",
+    siteName: "PulseAid",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "PulseAid - Emergency Blood Coordination",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PulseAid | Find Blood Donors Near You",
+    description: "Connect with matching blood donors in seconds during emergencies.",
+    images: ["/og-image.png"],
+  },
   manifest: "/manifest.json",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  }
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "EmergencyService",
+  "name": "PulseAid",
+  "url": "https://pulse-aid.netlify.app",
+  "logo": "https://pulse-aid.netlify.app/logo.png",
+  "description": "Connecting blood donors with recipients in real-time emergency situations.",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Bangalore",
+    "addressCountry": "IN"
+  },
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "Emergency Blood Support",
+    "url": "https://pulse-aid.netlify.app/emergency"
+  }
 };
 
 export default function RootLayout({
@@ -50,6 +104,12 @@ export default function RootLayout({
       }}
     >
       <html lang="en">
+        <head>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          />
+        </head>
         <body
           className={`${geistSans.variable} ${geistMono.variable} ${spaceMono.variable} antialiased font-sans`}
         >
