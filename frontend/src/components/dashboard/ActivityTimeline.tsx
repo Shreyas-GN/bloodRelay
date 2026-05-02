@@ -13,12 +13,7 @@ interface ActivityItem {
     bloodGroup: string;
 }
 
-const MOCK_ACTIVITY: ActivityItem[] = [
-    { id: "1", type: "request", user: "Rahul S.", action: "requested", target: "Blood", time: "2m ago", bloodGroup: "O+" },
-    { id: "2", type: "response", user: "Priya K.", action: "is responding to", target: "Amit V.", time: "15m ago", bloodGroup: "B+" },
-    { id: "3", type: "fulfillment", user: "Suresh M.", action: "donated to", target: "City Hospital", time: "1h ago", bloodGroup: "AB-" },
-    { id: "4", type: "request", user: "Ananya R.", action: "requested", target: "Blood", time: "3h ago", bloodGroup: "B-" },
-];
+const MOCK_ACTIVITY: ActivityItem[] = [];
 
 const STYLE_MAP = {
     request: {

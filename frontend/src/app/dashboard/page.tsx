@@ -63,6 +63,7 @@ export default function DashboardPage() {
     const [acceptingId, setAcceptingId] = useState<number | string | null>(null);
     const [acceptedIds, setAcceptedIds] = useState<Set<number | string>>(new Set());
     const [selectedRequestId, setSelectedRequestId] = useState<string | number | null>(null);
+    const [activeFilter, setActiveFilter] = useState<string>("Recent");
 
     const fetchData = useCallback(async () => {
         if (!user?.id) return;
@@ -152,6 +153,15 @@ export default function DashboardPage() {
             (r.status === "SEARCHING" || r.status === "SEARCHING_FOR_DONORS" || r.status === "CREATED" || r.status === "open" || acceptedIds.has(r.id))
     );
 
+    const filteredDonateRequests = [...donateRequests].sort((a, b) => {
+        if (activeFilter === "Critical") return (a.urgency_level === "IMMEDIATE" ? -1 : 1);
+        if (activeFilter === "Recent") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return 0; // Default to Recent
+    }).filter(r => {
+        if (activeFilter === "Compatible") return r.blood_group === profile?.blood_group;
+        return true;
+    });
+
     const displayName = user?.firstName ?? user?.username ?? "There";
 
     const hasEmergency = donateRequests.length > 0;
@@ -171,7 +181,7 @@ export default function DashboardPage() {
                         
                         <div className="hidden md:flex items-center gap-2 bg-[var(--color-base-50)] border border-[var(--color-base-200)] px-3 py-1 rounded-[var(--radius-pill)]">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[0.75rem] font-mono font-bold text-[var(--color-base-500)] tracking-widest uppercase">1,248 Active Donors</span>
+                            <span className="text-[0.75rem] font-mono font-bold text-[var(--color-base-500)] tracking-widest uppercase">Verified Donor Network</span>
                         </div>
                     </div>
 
@@ -310,8 +320,12 @@ export default function DashboardPage() {
                                     {/* FILTER BAR */}
                                     {profile?.is_available_donor && donateRequests.length > 0 && (
                                         <div className="flex flex-wrap items-center gap-2 mb-6">
-                                            {['Critical', 'Nearby', 'Compatible', 'Recent'].map((filter, idx) => (
-                                                <button key={filter} className={`px-4 py-1.5 rounded-[var(--radius-pill)] text-[0.75rem] font-bold font-mono tracking-widest uppercase transition-colors ${idx === 0 ? 'bg-[var(--color-blood-light)] text-[var(--color-blood)] border border-[var(--color-blood)]' : 'bg-[var(--color-base-50)] text-[var(--color-base-500)] border border-[var(--color-base-200)] hover:border-[var(--color-base-500)]'}`}>
+                                            {['Critical', 'Nearby', 'Compatible', 'Recent'].map((filter) => (
+                                                <button 
+                                                    key={filter} 
+                                                    onClick={() => setActiveFilter(filter)}
+                                                    className={`px-4 py-1.5 rounded-[var(--radius-pill)] text-[0.75rem] font-bold font-mono tracking-widest uppercase transition-colors ${activeFilter === filter ? 'bg-[var(--color-blood-light)] text-[var(--color-blood)] border border-[var(--color-blood)]' : 'bg-[var(--color-base-50)] text-[var(--color-base-500)] border border-[var(--color-base-200)] hover:border-[var(--color-base-500)]'}`}
+                                                >
                                                     {filter}
                                                 </button>
                                             ))}
@@ -345,9 +359,14 @@ export default function DashboardPage() {
                                             <h3 className="font-display font-bold text-[1.25rem] text-[var(--color-base-900)] mb-2">You're all caught up!</h3>
                                             <p className="text-[var(--color-base-500)] text-[0.9375rem] max-w-xs mx-auto">No urgent {profile.blood_group} requests right now. We'll alert you if something changes.</p>
                                         </div>
+                                    ) : filteredDonateRequests.length === 0 ? (
+                                        <div className="p-12 text-center border-[1.5px] border-[var(--color-base-200)] rounded-[var(--radius-card)] bg-white shadow-sm">
+                                            <h3 className="font-display font-bold text-[1.25rem] text-[var(--color-base-900)] mb-2">No matches found</h3>
+                                            <p className="text-[var(--color-base-500)] text-[0.9375rem] max-w-xs mx-auto">Try changing your filter. No requests match "{activeFilter}".</p>
+                                        </div>
                                     ) : (
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {donateRequests.map((req) => (
+                                            {filteredDonateRequests.map((req) => (
                                                 <BentoRequestCard
                                                     key={req.id}
                                                     request={req}
