@@ -38,6 +38,9 @@ export function BentoRequestCard({ request, onClick, onAccept, isAccepting, isAc
                         <h3 className="font-extrabold text-xl tracking-tighter text-zinc-900 dark:text-white leading-none mt-1">
                             {request.patient_name}
                         </h3>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
+                            {request.requester_name || "Anonymous"} • {request.metadata?.relation || "Unspecified"}
+                        </p>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center border border-zinc-100 dark:border-zinc-800">
                         <span className="text-lg font-black font-mono text-crimson">{request.blood_group}</span>
@@ -56,20 +59,20 @@ export function BentoRequestCard({ request, onClick, onAccept, isAccepting, isAc
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5">
+                        <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 flex flex-col justify-between">
                             <div className="flex items-center gap-2 mb-1">
                                 <Droplet className="w-3 h-3 text-crimson" />
                                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Units</span>
                             </div>
                             <p className="text-sm font-black font-mono text-zinc-900 dark:text-white">{request.units}</p>
                         </div>
-                        <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5">
+                        <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 flex flex-col justify-between">
                             <div className="flex items-center gap-2 mb-1">
                                 <Clock className="w-3 h-3 text-zinc-400" />
-                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Posted</span>
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Phase {request.escalation_phase || 1}</span>
                             </div>
-                            <p className="text-sm font-black font-mono text-zinc-900 dark:text-white">
-                                {new Date(request.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                            <p className="text-[11px] font-bold text-zinc-900 dark:text-white">
+                                {request.confirmed_count || 0} / {request.notified_count || 0} Responded
                             </p>
                         </div>
                     </div>

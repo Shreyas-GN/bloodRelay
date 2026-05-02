@@ -4,25 +4,40 @@ export class AlertService {
             const response = await fetch('/api/alerts/sms', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ to, message, type: 'SMS' })
+                body: JSON.stringify({ to, message })
             });
             return await response.json();
         } catch (error) {
             console.error('Failed to send SMS:', error);
+            throw error;
         }
     }
 
-    static async sendPushNotification(userId: string, title: string, body: string) {
+    static async sendPushNotification(fcmTokens: string[], title: string, body: string, data?: any) {
         try {
-            // Future implementation for OneSignal / FCM
-            const response = await fetch('/api/alerts/sms', {
+            const response = await fetch('/api/alerts/push', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ to: userId, message: `${title}: ${body}`, type: 'PUSH' })
+                body: JSON.stringify({ tokens: fcmTokens, title, body, data })
             });
             return await response.json();
         } catch (error) {
             console.error('Failed to send Push:', error);
+            throw error;
+        }
+    }
+
+    static async triggerEscalation(requestId: string) {
+        try {
+            const response = await fetch('/api/alerts/escalate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ requestId })
+            });
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to trigger escalation:', error);
+            throw error;
         }
     }
 }

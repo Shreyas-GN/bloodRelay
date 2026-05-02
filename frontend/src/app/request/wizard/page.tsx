@@ -176,9 +176,12 @@ export default function RequestWizardPage() {
                 blood_group: formData.blood_group,
                 units: formData.units,
                 urgency_level: formData.urgency_level,
+                status: 'SEARCHING',
                 note: '',
                 requester_relation: 'OTHER',
                 location: gpsLocation ? `POINT(${gpsLocation.lng} ${gpsLocation.lat})` : 'POINT(0 0)', 
+                latitude: gpsLocation ? gpsLocation.lat : null,
+                longitude: gpsLocation ? gpsLocation.lng : null,
             });
             router.push('/dashboard');
         } catch (err: any) {

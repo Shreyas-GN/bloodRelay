@@ -34,11 +34,11 @@ export default function Home() {
                 Dashboard
               </Link>
               <Link
-                href="/request/wizard"
-                className="flex items-center gap-1.5 px-4 py-1.5 bg-[var(--color-blood)] text-white rounded-[var(--radius-pill)] text-sm font-bold shadow-[var(--shadow-clay-hard)] hover:-translate-y-px transition-transform"
+                href="/emergency"
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-[var(--color-blood)] text-white rounded-[var(--radius-pill)] text-sm font-bold shadow-[var(--shadow-clay-hard)] hover:-translate-y-px transition-transform animate-pulse"
               >
                 <AlertTriangle className="w-4 h-4" />
-                Emergency
+                NEED BLOOD NOW
               </Link>
               <div className="relative group">
                 <UserButton
@@ -52,10 +52,10 @@ export default function Home() {
                 Sign in
               </Link>
               <Link
-                href="/request/wizard"
-                className="px-4 py-1.5 bg-[var(--color-blood)] text-white rounded-[var(--radius-pill)] text-sm font-bold shadow-[var(--shadow-clay-hard)] hover:-translate-y-px transition-transform"
+                href="/emergency"
+                className="px-4 py-1.5 bg-[var(--color-blood)] text-white rounded-[var(--radius-pill)] text-sm font-bold shadow-[var(--shadow-clay-hard)] hover:-translate-y-px transition-transform animate-pulse"
               >
-                Request Blood
+                NEED BLOOD NOW
               </Link>
             </SignedOut>
           </div>
@@ -85,14 +85,22 @@ export default function Home() {
 
             {/* CTAs */}
             <motion.div variants={fade} initial="hidden" animate="show" custom={2} className="flex flex-col sm:flex-row gap-3 pt-[40px] w-full sm:w-auto items-center">
-              <SignedOut>
-                <div className="flex flex-col items-center gap-4 w-full">
+              <div className="flex flex-col items-center gap-4 w-full">
+                <Link
+                  href="/emergency"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-[32px] py-[16px] bg-[var(--color-blood)] text-white font-display font-bold rounded-[var(--radius-pill)] shadow-[0_20px_50px_rgba(192,57,43,0.3)] hover:-translate-y-1 active:translate-y-px transition-all text-[1.125rem] border-2 border-white/20"
+                >
+                  <AlertTriangle className="w-5 h-5 mr-2" />
+                  NEED BLOOD NOW (Emergency)
+                </Link>
+                <div className="flex items-center gap-4">
                   <Link
-                    href="/request/wizard"
-                    className="w-full sm:w-auto inline-flex items-center justify-center px-[32px] py-[14px] bg-[var(--color-blood)] text-white font-display font-bold rounded-[var(--radius-pill)] shadow-[var(--shadow-clay-hard)] hover:-translate-y-px active:translate-y-px transition-transform text-[1rem]"
+                    href="/dashboard"
+                    className="text-[var(--color-base-700)] hover:text-[var(--color-blood)] hover:underline transition-colors text-[1rem] font-medium"
                   >
-                    Request Blood Now
+                    View active requests
                   </Link>
+                  <span className="text-zinc-300">|</span>
                   <Link
                     href="/sign-up"
                     className="text-[var(--color-base-700)] hover:text-[var(--color-blood)] hover:underline transition-colors text-[1rem] font-medium"
@@ -100,23 +108,7 @@ export default function Home() {
                     Register as a donor
                   </Link>
                 </div>
-              </SignedOut>
-              <SignedIn>
-                <div className="flex flex-col items-center gap-4 w-full">
-                  <Link
-                    href="/request/wizard"
-                    className="w-full sm:w-auto inline-flex items-center justify-center px-[32px] py-[14px] bg-[var(--color-blood)] text-white font-display font-bold rounded-[var(--radius-pill)] shadow-[var(--shadow-clay-hard)] hover:-translate-y-px active:translate-y-px transition-transform text-[1rem]"
-                  >
-                    Request Blood Now
-                  </Link>
-                  <Link
-                    href="/dashboard"
-                    className="text-[var(--color-base-700)] hover:text-[var(--color-blood)] hover:underline transition-colors text-[1rem] font-medium"
-                  >
-                    Go to Dashboard
-                  </Link>
-                </div>
-              </SignedIn>
+              </div>
             </motion.div>
           </motion.div>
         </section>

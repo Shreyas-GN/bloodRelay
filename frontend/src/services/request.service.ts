@@ -13,17 +13,18 @@ export class RequestService {
    * Creates a new emergency blood donation request.
    */
   static async createRequest(requestData: RequestInsert) {
-    const { data, error } = await db
-      .from('blood_requests')
-      .insert(requestData)
-      .select()
-      .single()
+    const response = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestData),
+    });
 
-    if (error) {
-       throw new Error(`Failed to create request: ${error.message}`)
+    const json = await response.json();
+    if (!response.ok) {
+        throw new Error(json.error || 'Failed to create request');
     }
     
-    return data
+    return json.request;
   }
 
   /**
@@ -32,7 +33,13 @@ export class RequestService {
   static async getActiveRequests() {
     const { data, error } = await db
       .from('blood_requests')
-      .select('*')
+      .select(`
+        *,
+        donor_responses (
+          *,
+          profiles (full_name, phone, blood_group)
+        )
+      `)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -64,7 +71,13 @@ export class RequestService {
   static async getUserRequests(userId: string) {
     const { data, error } = await db
       .from('blood_requests')
-      .select('*')
+      .select(`
+        *,
+        donor_responses (
+          *,
+          profiles (full_name, phone, blood_group)
+        )
+      `)
       .eq('requester_id', userId)
       .order('created_at', { ascending: false })
 
@@ -107,5 +120,74 @@ export class RequestService {
     }
     
     return true
+  }
+
+  /**
+   * Retrieves a specific request and its donor responses in a single query.
+   */
+  static async getRequestWithResponses(requestId: string) {
+    const { data, error } = await db
+      .from('blood_requests')
+      .select(`
+        *,
+        donor_responses (
+          *,
+          profiles (full_name, phone, blood_group)
+        )
+      `)
+      .eq('id', requestId)
+      .single()
+
+    if (error) {
+       throw new Error(`Failed to fetch request with responses: ${error.message}`)
+    }
+    
+    return data
+  }
+
+  /**
+   * Syncs notified and confirmed counts for a request.
+   */
+  static async updateRequestCounts(requestId: string, notifiedDelta: number = 0, confirmedDelta: number = 0) {
+    const { data: current, error: fetchErr } = await db
+      .from('blood_requests')
+      .select('notified_count, confirmed_count')
+      .eq('id', requestId)
+      .single()
+      
+    if (fetchErr) return null;
+
+    const { data, error } = await db
+      .from('blood_requests')
+      .update({
+        notified_count: (current.notified_count || 0) + notifiedDelta,
+        confirmed_count: (current.confirmed_count || 0) + confirmedDelta,
+      })
+      .eq('id', requestId)
+      .select()
+      .single()
+
+    if (error) {
+       throw new Error(`Failed to update request counts: ${error.message}`)
+    }
+    
+    return data
+  }
+
+  /**
+   * Marks older SEARCHING requests as EXPIRED based on timestamp logic in Edge Function
+   * Kept here for potential client-side fallback triggers
+   */
+  static async expireStaleRequests(hoursThreshold: number = 2) {
+    const thresholdDate = new Date(Date.now() - hoursThreshold * 60 * 60 * 1000).toISOString()
+    const { error } = await db
+      .from('blood_requests')
+      .update({ status: 'EXPIRED' })
+      .eq('status', 'SEARCHING')
+      .lte('created_at', thresholdDate)
+
+    if (error) {
+       throw new Error(`Failed to expire stale requests: ${error.message}`)
+    }
   }
 }

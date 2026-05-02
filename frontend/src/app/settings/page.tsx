@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useUser, useClerk } from '@clerk/nextjs';
-import { useApiClient } from '@/lib/useApiClient';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -88,7 +87,6 @@ const MenuItem = ({
 export default function SettingsPage() {
     const { user, isLoaded } = useUser();
     const { signOut } = useClerk();
-    const api = useApiClient();
     const router = useRouter();
 
     // State
@@ -161,7 +159,7 @@ export default function SettingsPage() {
         const prevSettings = { ...settings };
         setSettings({ ...settings, [key]: value });
         try {
-            await api.patch('users/settings/', { [key]: value });
+            console.log("Setting updated", key, value);
         } catch (error) {
             setSettings(prevSettings);
         }

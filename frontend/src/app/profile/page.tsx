@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useUser, UserButton } from '@clerk/nextjs';
-import { useApiClient } from '@/lib/useApiClient';
 import { useRouter } from 'next/navigation';
 import { DonorService } from '@/services/donor.service';
 import Link from 'next/link';
@@ -39,7 +38,6 @@ const fadeInUp = {
 
 export default function ProfilePage() {
     const { user, isLoaded } = useUser();
-    const api = useApiClient();
     const router = useRouter();
 
     const [profile, setProfile] = useState<UserProfile | null>(null);

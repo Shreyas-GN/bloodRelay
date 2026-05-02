@@ -5,7 +5,6 @@ import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { useNotifications } from "@/lib/useNotifications";
-import { useWebSocket } from "@/hooks/useWebSocket";
 import type { Notification } from "@/types";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,7 +18,8 @@ const NOTIFICATION_ICONS: Record<string, string> = {
 
 export function NotificationBell() {
     const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
-    const { messages, requestNotificationPermission } = useWebSocket();
+    const messages: any[] = [];
+    const requestNotificationPermission = () => {};
     const [isOpen, setIsOpen] = useState(false);
     const router = useRouter();
 

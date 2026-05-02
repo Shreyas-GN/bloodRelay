@@ -11,9 +11,10 @@ import {
 import { DonorService } from "@/services/donor.service";
 import { RequestService } from "@/services/request.service";
 import { AlertService } from "@/services/alert.service";
-import type { BloodRequest } from "@/types";
+import type { BloodRequest, DonorResponse } from "@/types";
 import Link from "next/link";
 import Map from "@/components/Map";
+import { formatDistance, estimateETA, calculateDistance } from "@/lib/geolocation";
 
 const parseLocation = (locStr: string | null) => {
     if (!locStr) return null;
@@ -44,7 +45,7 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
     const router = useRouter();
 
     const [request, setRequest] = useState<any | null>(null);
-    const [acceptedDonors, setAcceptedDonors] = useState<any[]>([]);
+    const [acceptedDonors, setAcceptedDonors] = useState<DonorResponse[]>([]);
     const [currentUserProfile, setCurrentUserProfile] = useState<any | null>(null);
     const [loading, setLoading] = useState(false);
     const [accepting, setAccepting] = useState(false);
@@ -125,7 +126,33 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
         }
         setAccepting(true);
         try {
-            await DonorService.submitDonorResponse(requestId!.toString(), currentUserProfile.id.toString());
+            let distance = null;
+            let eta = null;
+            if (currentUserProfile.latitude && currentUserProfile.longitude && request?.latitude && request?.longitude) {
+                distance = calculateDistance(
+                    currentUserProfile.latitude, 
+                    currentUserProfile.longitude, 
+                    request.latitude, 
+                    request.longitude
+                );
+                eta = estimateETA(distance);
+            } else if (currentUserProfile.location && request?.location && request.location !== 'POINT(0 0)') {
+                // Fallback to PostGIS point extraction if available
+                const userLoc = parseLocation(currentUserProfile.location);
+                const reqLoc = parseLocation(request.location);
+                if (userLoc && reqLoc) {
+                    distance = calculateDistance(userLoc.lat, userLoc.lng, reqLoc.lat, reqLoc.lng);
+                    eta = estimateETA(distance);
+                }
+            }
+
+            await DonorService.submitDonorResponse(
+                requestId!.toString(), 
+                currentUserProfile.id.toString(), 
+                'ACCEPTED',
+                distance,
+                eta
+            );
             if (request?.contact_phone) {
                 await AlertService.sendSMS(
                     request.contact_phone,
@@ -166,6 +193,8 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
     const isRequester = currentUserProfile?.id && request?.requester_id && 
         currentUserProfile.id.toString() === request.requester_id.toString();
     const isResponding = acceptedDonors.some(d => d.donor_id?.toString() === currentUserProfile?.id?.toString());
+    const userResponseStatus = acceptedDonors.find(d => d.donor_id?.toString() === currentUserProfile?.id?.toString())?.status;
+    const canSeeContact = isRequester || userResponseStatus === 'ACCEPTED' || userResponseStatus === 'CONFIRMED' || userResponseStatus === 'ARRIVED';
     const canSupport = !isRequester && !isResponding && !isClosed;
 
     return (
@@ -316,7 +345,11 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
                                                     </div>
                                                     <div>
                                                         <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-0.5">Contact</p>
-                                                        <p className="font-extrabold text-zinc-900 dark:text-white font-mono">{request.contact_phone}</p>
+                                                        {canSeeContact ? (
+                                                            <p className="font-extrabold text-zinc-900 dark:text-white font-mono">{request.contact_phone}</p>
+                                                        ) : (
+                                                            <p className="font-extrabold text-zinc-900 dark:text-white font-mono text-sm tracking-[0.2em] blur-[3px] select-none">XXXXXX0000</p>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -408,17 +441,26 @@ export function RequestDetailDrawer({ requestId, onClose, onActionComplete }: Pr
                                             <div className="space-y-2">
                                                 {acceptedDonors.map((resp) => (
                                                     <div key={resp.id} className="bg-white dark:bg-zinc-900 border border-emerald-500/10 p-3 rounded-xl flex items-center justify-between gap-3 shadow-sm">
-                                                        <p className="font-bold text-zinc-900 dark:text-white text-sm">{resp.profiles?.full_name || "A Donor"}</p>
-                                                        {isRequester && (
-                                                            <a href={`tel:${resp.profiles?.phone}`}>
-                                                                <button className="px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-transform hover:scale-105 active:scale-95">
-                                                                    <Phone className="w-3.5 h-3.5" /> Call
-                                                                </button>
-                                                            </a>
-                                                        )}
-                                                        {currentUserProfile?.id?.toString() === resp.donor_id?.toString() && (
-                                                            <span className="text-[10px] px-2 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold rounded-md">You</span>
-                                                        )}
+                                                        <div>
+                                                            <p className="font-bold text-zinc-900 dark:text-white text-sm">{resp.profiles?.full_name || "A Donor"}</p>
+                                                            {resp.distance_meters != null && (
+                                                                <p className="text-[10px] text-zinc-500 font-medium">
+                                                                    {formatDistance(resp.distance_meters)} • ETA ~{estimateETA(resp.distance_meters)} min
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {isRequester && (
+                                                                <a href={`tel:${resp.profiles?.phone}`}>
+                                                                    <button className="px-3 py-1.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold rounded-lg text-xs flex items-center gap-1.5 transition-transform hover:scale-105 active:scale-95">
+                                                                        <Phone className="w-3.5 h-3.5" /> Call
+                                                                    </button>
+                                                                </a>
+                                                            )}
+                                                            {currentUserProfile?.id?.toString() === resp.donor_id?.toString() && (
+                                                                <span className="text-[10px] px-2 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold rounded-md">You</span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 ))}
                                             </div>

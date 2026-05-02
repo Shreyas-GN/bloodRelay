@@ -3,20 +3,38 @@
 import { useState } from 'react';
 import { useUser } from '@clerk/nextjs';
 import { DonorService } from '@/services/donor.service';
+import { motion } from 'framer-motion';
+import { Clock, Heart, AlertCircle } from 'lucide-react';
 
 interface DonorAvailabilityToggleProps {
     initialAvailable: boolean;
+    cooldownUntil?: string | null;
+    lastDonationDate?: string | null;
     onToggle?: (newStatus: boolean) => void;
 }
 
-export function DonorAvailabilityToggle({ initialAvailable, onToggle }: DonorAvailabilityToggleProps) {
+export function DonorAvailabilityToggle({ 
+    initialAvailable, 
+    cooldownUntil, 
+    lastDonationDate,
+    onToggle 
+}: DonorAvailabilityToggleProps) {
     const { user } = useUser();
     const [isAvailable, setIsAvailable] = useState(initialAvailable);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Check if donor is in cooldown
+    const inCooldown = cooldownUntil && new Date(cooldownUntil) > new Date();
+    const cooldownDate = cooldownUntil ? new Date(cooldownUntil) : null;
+    const daysRemaining = cooldownDate 
+        ? Math.ceil((cooldownDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)) 
+        : 0;
+
     const handleToggle = async () => {
         if (!user) return;
+        if (inCooldown) return; // Block override during cooldown
+
         setLoading(true);
         setError(null);
 
@@ -25,52 +43,93 @@ export function DonorAvailabilityToggle({ initialAvailable, onToggle }: DonorAva
             await DonorService.updateProfile(user.id, {
                 is_available_donor: newStatus
             });
-
             setIsAvailable(newStatus);
-
-            if (onToggle) {
-                onToggle(newStatus);
-            }
+            onToggle?.(newStatus);
         } catch (err: any) {
-            console.error('Error toggling availability:', err);
             setError(err.message || 'Failed to update availability');
         } finally {
             setLoading(false);
         }
     };
 
+    // Cooldown state
+    if (inCooldown) {
+        return (
+            <div className="p-5 rounded-2xl border-2 border-amber-500/30 bg-amber-500/5 space-y-4">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                        <Clock className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                        <p className="font-bold text-zinc-900 dark:text-white">Donation Cooldown Active</p>
+                        <p className="text-sm text-zinc-500">Your body is recovering. Rest up!</p>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 space-y-1.5">
+                    {lastDonationDate && (
+                        <div className="flex justify-between text-sm">
+                            <span className="text-zinc-500">Last Donated</span>
+                            <span className="font-bold text-zinc-900 dark:text-white">
+                                {new Date(lastDonationDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                        </div>
+                    )}
+                    <div className="flex justify-between text-sm">
+                        <span className="text-zinc-500">Available Again</span>
+                        <span className="font-bold text-amber-600 dark:text-amber-400">
+                            {cooldownDate?.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-zinc-500">Days Remaining</span>
+                        <span className="font-bold text-zinc-900 dark:text-white">{daysRemaining} days</span>
+                    </div>
+                </div>
+
+                {/* Cooldown Progress Bar */}
+                <div className="space-y-1">
+                    <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-2">
+                        <div
+                            className="bg-amber-500 h-2 rounded-full transition-all"
+                            style={{
+                                width: `${Math.max(5, 100 - (daysRemaining / 90) * 100)}%`
+                            }}
+                        />
+                    </div>
+                    <p className="text-xs text-zinc-400">Recovery progress</p>
+                </div>
+
+                <p className="text-xs text-zinc-500 flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    Donation cooldown is enforced to protect your health (90-day minimum rest period).
+                </p>
+            </div>
+        );
+    }
+
+    // Normal toggle state
     return (
         <div className="space-y-4">
-            {/* Toggle Card */}
-            <div className={`p-6 rounded-xl border-2 transition-all ${isAvailable
-                    ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500'
-                    : 'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700'
-                }`}>
+            <motion.div
+                animate={{ 
+                    backgroundColor: isAvailable ? 'rgba(16, 185, 129, 0.05)' : 'transparent',
+                    borderColor: isAvailable ? 'rgb(16, 185, 129)' : 'rgb(63, 63, 70)'
+                }}
+                className="p-5 rounded-2xl border-2 transition-colors"
+            >
                 <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isAvailable ? 'bg-green-500' : 'bg-gray-400'
-                                }`}>
-                                {isAvailable ? (
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                ) : (
-                                    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                )}
-                            </div>
-                            <div>
-                                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                    Donor Availability
-                                </h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    {isAvailable
-                                        ? 'You will receive emergency blood donation requests'
-                                        : 'You will not receive donation requests'}
-                                </p>
-                            </div>
+                    <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isAvailable ? 'bg-emerald-500/10' : 'bg-zinc-100 dark:bg-zinc-800'}`}>
+                            <Heart className={`w-5 h-5 transition-colors ${isAvailable ? 'text-emerald-500' : 'text-zinc-400'}`} />
+                        </div>
+                        <div>
+                            <p className="font-bold text-zinc-900 dark:text-white">Available to Donate</p>
+                            <p className="text-xs text-zinc-500">
+                                {isAvailable 
+                                    ? 'You\'ll receive nearby emergency alerts' 
+                                    : 'Turn on to start receiving requests'}
+                            </p>
                         </div>
                     </div>
 
@@ -78,62 +137,44 @@ export function DonorAvailabilityToggle({ initialAvailable, onToggle }: DonorAva
                     <button
                         onClick={handleToggle}
                         disabled={loading}
-                        className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 ${isAvailable ? 'bg-green-600' : 'bg-gray-300 dark:bg-gray-600'
-                            } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         role="switch"
                         aria-checked={isAvailable}
+                        className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:opacity-50 ${isAvailable ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-600'}`}
                     >
-                        <span
-                            className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${isAvailable ? 'translate-x-7' : 'translate-x-1'
-                                }`}
+                        <motion.span
+                            animate={{ x: isAvailable ? 22 : 2 }}
+                            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                            className="inline-block h-5 w-5 rounded-full bg-white shadow-sm"
                         />
                     </button>
                 </div>
 
-                {/* Status Badge */}
-                <div className="mt-4 flex items-center gap-2">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${isAvailable
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                        }`}>
-                        <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-green-600 animate-pulse' : 'bg-gray-500'
-                            }`} />
-                        {isAvailable ? 'Available for Donations' : 'Not Available'}
-                    </span>
-                </div>
+                {isAvailable && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="mt-4 pt-4 border-t border-emerald-500/20 flex items-center gap-2"
+                    >
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            Live — You're visible to the emergency system
+                        </span>
+                    </motion.div>
+                )}
+            </motion.div>
 
-                {/* Info Text */}
-                <div className="mt-4 p-3 bg-white dark:bg-gray-900 rounded-lg">
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {isAvailable ? (
-                            <>
-                                <span className="font-semibold text-green-600 dark:text-green-400">Active:</span> You'll be notified when someone nearby needs your blood type.
-                            </>
-                        ) : (
-                            <>
-                                <span className="font-semibold text-gray-700 dark:text-gray-300">Inactive:</span> Turn on availability when you're ready to donate.
-                            </>
-                        )}
-                    </p>
-                </div>
-            </div>
-
-            {/* Error Message */}
             {error && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                    <p className="text-sm text-red-800 dark:text-red-300">{error}</p>
-                </div>
+                <p className="text-sm text-rose-500 font-medium flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4" />
+                    {error}
+                </p>
             )}
 
-            {/* Loading Indicator */}
-            {loading && (
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Updating...
-                </div>
+            {lastDonationDate && (
+                <p className="text-xs text-zinc-500 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" />
+                    Last donated: {new Date(lastDonationDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
             )}
         </div>
     );

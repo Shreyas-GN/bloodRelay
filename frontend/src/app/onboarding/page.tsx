@@ -8,6 +8,7 @@ import { Droplet, MapPin, Phone, Heart, ArrowRight, ShieldCheck, Check } from 'l
 import { motion } from 'framer-motion';
 import { Input } from '@/components/ui/Input';
 import { LocationAutocomplete } from '@/components/ui/LocationAutocomplete';
+import { getCurrentPosition } from '@/lib/geolocation';
 
 const bloodGroups = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] as const;
 
@@ -27,6 +28,8 @@ export default function OnboardingPage() {
         blood_group: '',
         phone: '',
         location: '',
+        latitude: null as number | null,
+        longitude: null as number | null,
         is_available_donor: true,
     });
 
@@ -38,7 +41,32 @@ export default function OnboardingPage() {
         setError(null);
 
         try {
-            await DonorService.updateProfile(user.id, formData);
+            let lat = formData.latitude;
+            let lng = formData.longitude;
+            let locationPoint = null;
+
+            if (!lat || !lng) {
+                try {
+                    const pos = await getCurrentPosition();
+                    lat = pos.coords.latitude;
+                    lng = pos.coords.longitude;
+                } catch (geoErr) {
+                    console.warn("Could not get exact location, proceeding without it", geoErr);
+                }
+            }
+
+            if (lat && lng) {
+                locationPoint = `POINT(${lng} ${lat})`;
+            }
+
+            const dataToSave = {
+                ...formData,
+                latitude: lat,
+                longitude: lng,
+                location: locationPoint || formData.location // Fallback or proper point
+            };
+
+            await DonorService.updateProfile(user.id, dataToSave as any);
             router.push('/dashboard');
         } catch (err: any) {
             console.error("Onboarding failed", err);

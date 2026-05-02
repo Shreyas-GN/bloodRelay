@@ -19,13 +19,18 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { RequestDetailDrawer } from "@/components/RequestDetailDrawer";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
 import { BentoRequestCard } from "@/components/dashboard/BentoRequestCard";
-import type { BloodRequest, User } from "@/types";
+import { EmergencyTracker } from "@/components/dashboard/EmergencyTracker";
+import type { BloodRequest, User, DonorResponse } from "@/types";
+import { supabaseClient } from "@/lib/supabase/client";
+import { useRealtimeAlerts } from "@/hooks/useRealtimeAlerts";
+import { NotificationPrompt } from "@/components/NotificationPrompt";
 
 type Tab = "donate" | "mine";
 
 const STATUS_BADGE: Record<string, { bg: string, text: string }> = {
     CREATED: { bg: "bg-zinc-100", text: "text-zinc-600" },
     open: { bg: "bg-amber-500/10", text: "text-amber-700" },
+    SEARCHING: { bg: "bg-[var(--color-warn-light)]", text: "text-[var(--color-warn)]" },
     SEARCHING_FOR_DONORS: { bg: "bg-[var(--color-warn-light)]", text: "text-[var(--color-warn)]" },
     DONOR_ACCEPTED: { bg: "bg-[var(--color-safe-light)]", text: "text-[var(--color-safe)]" },
     fulfilled: { bg: "bg-[var(--color-safe-light)]", text: "text-[var(--color-safe)]" },
@@ -37,6 +42,7 @@ const STATUS_BADGE: Record<string, { bg: string, text: string }> = {
 const STATUS_LABEL: Record<string, string> = {
     CREATED: "Created",
     open: "Looking for donors",
+    SEARCHING: "Emergency: Searching",
     SEARCHING_FOR_DONORS: "Looking for donors",
     DONOR_ACCEPTED: "Donor found",
     fulfilled: "Donor found",
@@ -48,6 +54,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default function DashboardPage() {
     const { user, isLoaded } = useUser();
     const router = useRouter();
+    useRealtimeAlerts(); // Activate listener
 
     const [profile, setProfile] = useState<User | null>(null);
     const [allRequests, setAllRequests] = useState<BloodRequest[]>([]);
@@ -86,6 +93,20 @@ export default function DashboardPage() {
         if (!isLoaded) return;
         if (!user) { router.push("/"); return; }
         fetchData();
+
+        // Subscribe to relevant Realtime changes to auto-refresh dashboard
+        const channel = supabaseClient.channel('dashboard_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'blood_requests' }, () => {
+                fetchData();
+            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'donor_responses' }, () => {
+                fetchData();
+            })
+            .subscribe();
+
+        return () => {
+            supabaseClient.removeChannel(channel);
+        };
     }, [isLoaded, user, fetchData, router]);
 
     const handleAccept = async (requestId: any) => {
@@ -122,11 +143,13 @@ export default function DashboardPage() {
     }
 
     const myRequests = allRequests.filter((r) => r.requester_id === (profile?.id ?? -1));
+    
+    // Show requests that match blood group OR are anonymous emergencies
     const donateRequests = allRequests.filter(
         (r) =>
             r.requester_id !== (profile?.id ?? -1) &&
-            r.blood_group === profile?.blood_group &&
-            (r.status === "SEARCHING_FOR_DONORS" || r.status === "CREATED" || r.status === "open" || acceptedIds.has(r.id))
+            (r.blood_group === profile?.blood_group || r.requester_id === null) &&
+            (r.status === "SEARCHING" || r.status === "SEARCHING_FOR_DONORS" || r.status === "CREATED" || r.status === "open" || acceptedIds.has(r.id))
     );
 
     const displayName = user?.firstName ?? user?.username ?? "There";
@@ -351,36 +374,49 @@ export default function DashboardPage() {
                                             </Link>
                                         </div>
                                     ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {myRequests.map((req) => {
-                                                const statusStyle = STATUS_BADGE[req.status] ?? STATUS_BADGE["CREATED"];
-                                                const statusLabel = STATUS_LABEL[req.status] ?? "Unknown";
-                                                
-                                                return (
-                                                    <motion.div
-                                                        key={req.id}
-                                                        layout
-                                                        onClick={() => setSelectedRequestId(req.id)}
-                                                        className="bg-white border-[1.5px] border-[var(--color-base-200)] rounded-[var(--radius-card)] p-6 shadow-[var(--shadow-clay)] cursor-pointer hover:border-[var(--color-blood)] transition-colors"
-                                                    >
-                                                        <div className="flex items-start justify-between mb-6">
-                                                            <div className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest ${statusStyle.bg} ${statusStyle.text}`}>
-                                                                {statusLabel}
+                                        <div className="space-y-8">
+                                            {/* Show Emergency Tracker for the first active request */}
+                                            {myRequests[0].status === "SEARCHING" || myRequests[0].status === "SEARCHING_FOR_DONORS" ? (
+                                                <div className="mb-8">
+                                                    <EmergencyTracker 
+                                                        request={myRequests[0]} 
+                                                        responses={(myRequests[0] as any).donor_responses || []} 
+                                                        isRequester={true} 
+                                                    />
+                                                </div>
+                                            ) : null}
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                                {myRequests.map((req) => {
+                                                    const statusStyle = STATUS_BADGE[req.status] ?? STATUS_BADGE["CREATED"];
+                                                    const statusLabel = STATUS_LABEL[req.status] ?? "Unknown";
+                                                    
+                                                    return (
+                                                        <motion.div
+                                                            key={req.id}
+                                                            layout
+                                                            onClick={() => setSelectedRequestId(req.id)}
+                                                            className="bg-white border-[1.5px] border-[var(--color-base-200)] rounded-[var(--radius-card)] p-6 shadow-[var(--shadow-clay)] cursor-pointer hover:border-[var(--color-blood)] transition-colors"
+                                                        >
+                                                            <div className="flex items-start justify-between mb-6">
+                                                                <div className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest ${statusStyle.bg} ${statusStyle.text}`}>
+                                                                    {statusLabel}
+                                                                </div>
+                                                                <div className="w-[40px] h-[40px] rounded-[12px] bg-[var(--color-base-50)] flex items-center justify-center font-bold font-mono text-[var(--color-blood)] border border-[var(--color-base-200)]">
+                                                                    {req.blood_group}
+                                                                </div>
                                                             </div>
-                                                            <div className="w-[40px] h-[40px] rounded-[12px] bg-[var(--color-base-50)] flex items-center justify-center font-bold font-mono text-[var(--color-blood)] border border-[var(--color-base-200)]">
-                                                                {req.blood_group}
+                                                            <h3 className="font-display font-bold text-[1.125rem] text-[var(--color-base-900)] tracking-tight mb-2 truncate">
+                                                                {req.patient_name}
+                                                            </h3>
+                                                            <div className="flex items-center gap-2 text-[var(--color-base-500)] text-[0.875rem] font-medium font-sans">
+                                                                <MapPin className="w-3 h-3" />
+                                                                {req.hospital_name}
                                                             </div>
-                                                        </div>
-                                                        <h3 className="font-display font-bold text-[1.125rem] text-[var(--color-base-900)] tracking-tight mb-2 truncate">
-                                                            {req.patient_name}
-                                                        </h3>
-                                                        <div className="flex items-center gap-2 text-[var(--color-base-500)] text-[0.875rem] font-medium font-sans">
-                                                            <MapPin className="w-3 h-3" />
-                                                            {req.hospital_name}
-                                                        </div>
-                                                    </motion.div>
-                                                )
-                                            })}
+                                                        </motion.div>
+                                                    )
+                                                })}
+                                            </div>
                                         </div>
                                     )}
                                 </motion.div>
@@ -397,6 +433,8 @@ export default function DashboardPage() {
                 onClose={() => setSelectedRequestId(null)}
                 onActionComplete={() => { fetchData(); setSelectedRequestId(null); }}
             />
+
+            <NotificationPrompt />
         </div>
     );
 }

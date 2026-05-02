@@ -37,6 +37,11 @@ interface BloodRequest {
     note: string;
     status: string;
     created_at: string;
+    requester_name?: string;
+    metadata?: {
+        relation?: string;
+        is_anonymous?: boolean;
+    };
     requester: {
         id: number;
         first_name: string;
@@ -95,10 +100,9 @@ export default function RequestDetailPage() {
                             const lng = parseFloat(locMatch[1]);
                             const lat = parseFloat(locMatch[2]);
                             
-                            const nearbyDonors = await DonorService.getNearbyDonors(lat, lng, 20); 
+                            const nearbyDonors = await DonorService.getNearbyDonors(lat, lng, 20, requestData.blood_group); 
                             
                             matchingDonors = nearbyDonors
-                                .filter((d: any) => d.blood_group === requestData.blood_group)
                                 .map((d: any) => ({
                                     id: d.id,
                                     name: d.full_name,
@@ -363,8 +367,12 @@ export default function RequestDetailPage() {
                                             <User className="w-4 h-4" />
                                         </div>
                                         <div>
-                                            <p className="font-bold text-zinc-900 dark:text-white">{request.requester?.first_name || 'Anonymous'}</p>
-                                            <p className="text-xs font-medium text-zinc-500">Relation: {request.requester_relation?.toLowerCase() || 'unspecified'}</p>
+                                            <p className="font-bold text-zinc-900 dark:text-white">
+                                                {request.requester_name || request.requester?.first_name || 'Anonymous'}
+                                            </p>
+                                            <p className="text-xs font-medium text-zinc-500">
+                                                Relation: {request.metadata?.relation || 'Unspecified'}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
