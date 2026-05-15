@@ -1,71 +1,92 @@
-# BloodReach
+# 🩸 PulseAid - Emergency Blood Coordination Platform
 
-BloodReach is a real-time emergency coordination platform designed to connect families in urgent need of blood with compatible donors in their immediate vicinity.
+PulseAid is an advanced emergency blood coordination platform designed to instantly connect hospitals, patients, and donors. Built with a modern, microservice-based architecture, it features real-time geospatial tracking, automated multi-tiered notification escalation, and secure API infrastructure.
 
-The platform exists to solve the critical inefficiency of medical emergencies where time is lost manually broadcasting requests across social networks. By providing a structured, direct coordination system, BloodReach eliminates communication noise and reduces the time required to secure a donor during life-critical situations.
+![PulseAid Architecture Overview](./pulse_aid_architecture_and_deployment.md) *(Note: Refer to the Architecture markdown for full diagrams)*
 
-## Core Features
+---
 
-*   **Natural Language Emergency Parsing**: Users can input raw, unstructured text describing their emergency. The system utilizes Llama-3 to instantly extract critical parameters (blood group, urgency level, location, and required units), automatically structuring the data without requiring the user to navigate complex forms during a crisis.
-*   **Precision Geo-Alerting**: The notification engine evaluates donor proximity and blood group compatibility. Alerts are only dispatched to eligible donors within a defined radius of the hospital, preventing alert fatigue and ensuring high relevance.
-*   **Donor Integrity and Cooldown System**: To protect donor health, the platform enforces medical-grade recovery cooldowns. Donors can also manually toggle their availability to prevent notifications when they are unable to assist.
-*   **Real-Time Dashboard**: A centralized interface that tracks active emergency requests, donor responses, and network activity through live database subscriptions.
+## 🚀 Key Features
 
-## Architecture
+*   **Geospatial Matching Engine**: High-performance, asynchronous PostGIS queries to locate the nearest available donors instantly.
+*   **Tiered Escalation Protocol**: Automated background tasks that expand the search radius (5km → 15km → 25km) over time if a request remains unfulfilled.
+*   **Real-time Coordination**: End-to-end status tracking (Searching, Donor Accepted, Fulfilled).
+*   **Secure Authentication**: JWT-based stateless authentication powered by Clerk.
 
-BloodReach is architected for speed, reliability, and real-time data synchronization.
+---
 
-*   **Frontend**: Next.js (App Router) combined with Tailwind CSS. The design system prioritizes minimal cognitive load, utilizing high-contrast typography and a neutral palette to ensure critical information is immediately accessible.
-*   **Backend & Data Layer**: Supabase provides the primary PostgreSQL database and Realtime engine. Database webhooks and edge functions handle the asynchronous processing of donor matching and notification dispatch.
-*   **AI Service**: Groq API integrated with Llama-3 handles the low-latency natural language processing required for the emergency entry flow.
-*   **Authentication**: Clerk is utilized for secure, session-based identity management across the platform.
+## 🏗️ Architecture Overview
 
-## Technical Decisions
+The system runs on a highly decoupled microservice architecture:
 
-*   **Supabase Realtime over Polling**: To ensure users see donor responses immediately, the dashboard subscribes directly to PostgreSQL row-level changes via Supabase Realtime, eliminating the overhead and latency of HTTP polling.
-*   **Server-Side AI Parsing**: The natural language parsing is executed on a secure Next.js API route rather than the client. This protects the Groq API keys and ensures consistent performance regardless of the user's device capabilities.
-*   **CSS Variables for Theming**: The design system relies strictly on CSS variables rather than hardcoded Tailwind utility values. This ensures absolute consistency across the application and prevents design regression.
+1.  **Frontend (Next.js)**: Client-side UI built for speed and responsiveness, deployed to Vercel.
+2.  **Core Backend (Django + DRF)**: The primary API gateway handling business logic, data validation, and request persistence.
+3.  **Matching Engine (FastAPI)**: A dedicated, asynchronous microservice handling raw spatial SQL queries and task orchestration via `BackgroundTasks`.
+4.  **Database (Supabase)**: A centralized PostgreSQL database mapped across all services with `managed=False` in Django.
 
-## Local Development Setup
+### 🔄 Emergency Flow
+`User (Next.js) ➔ API Request (Django) ➔ Persist to DB ➔ Async Trigger (FastAPI) ➔ Geospatial Match (PostGIS) ➔ Notify Donors`
+
+---
+
+## 🐳 Running Locally (Docker Compose)
+
+The entire stack is containerized for seamless local development.
 
 ### Prerequisites
-*   Node.js (v18 or higher)
-*   A Supabase project (for PostgreSQL and Realtime)
-*   A Clerk application (for Authentication)
-*   A Groq API key (for AI parsing)
+*   Docker & Docker Desktop
+*   A Supabase project (with PostGIS enabled)
+*   A Clerk application
 
-### Installation Steps
+### 1. Environment Setup
+Copy the placeholder environment file to set up your secrets safely:
+```bash
+cp .env.example .env
+```
+*(Fill out the required API keys and connection strings in your local `.env` files. Ensure you do not commit these!)*
 
-1.  Clone the repository and navigate to the frontend directory:
-    ```bash
-    git clone https://github.com/Shreyas-GN/BloodReach.git
-    cd BloodReach/frontend
-    ```
+### 2. Start the Stack
+From the root directory, simply run:
+```bash
+docker-compose up --build
+```
 
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
+**Services will be available at:**
+*   Frontend: `http://localhost:3000`
+*   Django API: `http://localhost:8000`
+*   FastAPI Engine: `http://localhost:9000`
 
-3.  Configure environment variables:
-    Create a `.env.local` file in the `frontend` directory and provide the necessary keys:
-    ```env
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-    CLERK_SECRET_KEY=your_clerk_secret_key
-    
-    NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-    
-    GROQ_API_KEY=your_groq_api_key
-    ```
+---
 
-4.  Start the development server:
-    ```bash
-    npm run dev
-    ```
+## 🌍 Production Deployment
 
-The application will be available at `http://localhost:3000`.
+The architecture is built for horizontal scalability and safe deployment on standard PaaS providers.
 
-## Disclaimer
+### 1. Database (Supabase)
+*   Ensure your Supabase PostgreSQL instance has the PostGIS extension enabled.
+*   **Important**: Use the **Connection Pooler URL (Port 6543)** in production to prevent connection exhaustion.
 
-BloodReach is an open-source coordination utility. It does not provide medical services, advice, or diagnostics. All medical procedures and transfusions must be handled by certified professionals in clinical environments.
+### 2. Matching Engine (FastAPI on Render / Railway)
+*   Deploy using the `matching-engine/Dockerfile`.
+*   The `CMD` automatically binds to the `$PORT` environment variable.
+*   **Required ENV**: `DATABASE_URL`, `CORS_ORIGINS`.
+
+### 3. Core Backend (Django on Render / Railway)
+*   Deploy using the `backend/Dockerfile` (Uses Gunicorn).
+*   **Required ENV**: `DATABASE_URL`, `DJANGO_SECRET_KEY`, `CLERK_SECRET_KEY`, `MATCHING_ENGINE_URL`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`.
+
+### 4. Frontend (Next.js on Vercel)
+*   Deploy standard Next.js build.
+*   **Required ENV**: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `BACKEND_URL`.
+
+---
+
+## 🛡️ Security Posture
+
+*   **Zero Exposed Secrets**: All sensitive tokens and connection strings are securely injected via CI/CD environment variables.
+*   **Cross-Origin Protection**: Strict, environment-driven CORS policies for Django and FastAPI.
+*   **No Direct DB Access**: The frontend routes all mutations through the secured Django API gateway, preventing direct Supabase exposure.
+
+---
+
+*PulseAid is built to save lives through code.*

@@ -1,47 +1,50 @@
+import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
-import { AlertEngineService } from '@/services/alert-engine.service';
 
 export async function POST(req: Request) {
     try {
+        // 1. Get Clerk token for backend authentication
+        const { getToken } = await auth();
+        const token = await getToken();
+        
+        if (!token) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const body = await req.json();
         
-        // 1. Prepare data (convert lat/lng to PostGIS location)
-        const { latitude, longitude, ...rest } = body;
-        const requestData: any = {
-            ...rest,
-            status: 'SEARCHING',
-            escalation_phase: 1,
-            created_at: new Date().toISOString()
-        };
+        // 2. Forward the request to the Django Backend
+        // Inside the Docker network, we use the service name 'backend'
+        const DJANGO_BACKEND_URL = process.env.BACKEND_URL || 'http://backend:8000';
+        
+        const response = await fetch(`${DJANGO_BACKEND_URL}/api/requests/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(body),
+        });
 
-        if (latitude && longitude) {
-            requestData.location = `POINT(${longitude} ${latitude})`;
+        const data = await response.json();
+
+        if (!response.ok) {
+            console.error('Backend error:', data);
+            return NextResponse.json(
+                { error: data.error || 'Backend failed to process request' }, 
+                { status: response.status }
+            );
         }
 
-        // 2. Create the request
-        const { data: request, error } = await supabaseServer
-            .from('blood_requests')
-            .insert(requestData)
-            .select()
-            .single();
+        // 3. Return the response from Django (which includes matching engine status)
+        return NextResponse.json({ 
+            success: true, 
+            request: data.request,
+            matching: data.matching_triggered 
+        });
 
-        if (error) {
-            console.error('Request creation error:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
-        }
-
-        // 2. Trigger Phase 1 Notifications immediately
-        try {
-            await AlertEngineService.executePhase1(request);
-        } catch (alertError) {
-            console.error('Alert Engine Phase 1 failed:', alertError);
-            // We don't fail the request creation if alerts fail, but we log it.
-        }
-
-        return NextResponse.json({ success: true, request });
     } catch (error: any) {
-        console.error('API Request error:', error);
-        return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
+        console.error('Frontend API Route error:', error);
+        return NextResponse.json({ error: 'Failed to connect to backend' }, { status: 500 });
     }
 }
