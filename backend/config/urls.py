@@ -3,7 +3,7 @@ from django.urls import path, include
 from django.http import HttpResponse
 
 def home(request):
-    return HttpResponse("PulseAid Django backend working")
+    return HttpResponse("BloodReach Django backend working")
 
 urlpatterns = [
     path('admin/', admin.site.urls),

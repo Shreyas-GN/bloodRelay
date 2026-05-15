@@ -30,4 +30,4 @@ services:
 
 networks:
   default:
-    name: pulse-aid-network
+    name: bloodreach-network
