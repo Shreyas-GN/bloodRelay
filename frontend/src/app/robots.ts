@@ -13,6 +13,6 @@ export default function robots(): MetadataRoute.Robots {
         '/api/',
       ],
     },
-    sitemap: 'https://bloodreach.netlify.app/sitemap.xml',
+    sitemap: 'https://bloodrelay.netlify.app/sitemap.xml',
   };
 }

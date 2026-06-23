@@ -93,9 +93,9 @@ export function LocationAutocomplete({ value, onChange, onSelect, placeholder, c
         />
         <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
           {loading ? (
-            <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
+            <Loader2 className="w-4 h-4 text-[var(--color-base-400)] animate-spin" />
           ) : (
-            <Search className="w-4 h-4 text-zinc-400" />
+            <Search className="w-4 h-4 text-[var(--color-base-400)]" />
           )}
         </div>
       </div>
@@ -106,21 +106,21 @@ export function LocationAutocomplete({ value, onChange, onSelect, placeholder, c
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            className="absolute z-50 w-full mt-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl shadow-xl overflow-hidden"
+            className="absolute z-50 w-full mt-2 bg-white border border-[var(--color-base-200)] rounded-[var(--radius-card)] shadow-[var(--shadow-clay-hard)] overflow-hidden"
           >
             {suggestions.map((item, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => handleSelect(item)}
-                className="w-full px-4 py-3 text-left hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors flex items-start gap-3 border-b border-zinc-100 dark:border-white/5 last:border-0"
+                className="w-full px-4 py-3 text-left hover:bg-[var(--color-base-50)] transition-colors flex items-start gap-3 border-b border-[var(--color-base-100)] last:border-0"
               >
-                <MapPin className="w-4 h-4 text-zinc-400 mt-1 shrink-0" />
+                <MapPin className="w-4 h-4 text-[var(--color-base-400)] mt-1 shrink-0" />
                 <div>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                  <p className="text-sm font-bold text-[var(--color-base-900)]">
                     {item.properties.name}
                   </p>
-                  <p className="text-xs text-zinc-500 font-medium">
+                  <p className="text-xs text-[var(--color-base-500)] font-medium">
                     {[item.properties.city, item.properties.state, item.properties.country].filter(Boolean).join(", ")}
                   </p>
                 </div>

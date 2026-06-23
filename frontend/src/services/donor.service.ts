@@ -37,7 +37,7 @@ export class DonorService {
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single()
+      .maybeSingle()
 
     if (error) {
        throw new Error(`Failed to fetch profile: ${error.message}`)
@@ -60,8 +60,8 @@ export class DonorService {
     return data
   }
 
-  static async updateProfile(userId: string, profileData: ProfileUpdate) {
-    const { data, error } = await (supabaseClient as any)
+  static async updateProfile(userId: string, profileData: ProfileUpdate, supabase = supabaseClient) {
+    const { data, error } = await (supabase as any)
       .from('profiles')
       .upsert({ id: userId, ...profileData })
       .select()

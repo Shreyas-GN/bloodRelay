@@ -1,9 +1,12 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  // Turbopack is the default bundler in Next.js 16.
-  // next-pwa is webpack-only and incompatible — removed to unblock dev/build.
   turbopack: {},
+  webpack: (config, { isServer }) => {
+    // Webpack config can go here if needed in the future
+    return config;
+  }
 };
 
 export default nextConfig;

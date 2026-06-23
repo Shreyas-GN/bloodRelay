@@ -16,6 +16,7 @@ class ClerkAuthentication(authentication.BaseAuthentication):
 
         token = auth_header.split(' ')[1]
 
+        # 2. Standard Decode Process
         try:
             # Note: Signature verification is disabled for this simplified setup.
             # In production, use: jwt.decode(token, CLERK_PUBLIC_KEY, algorithms=['RS256'])
@@ -27,6 +28,18 @@ class ClerkAuthentication(authentication.BaseAuthentication):
 
             # Get or create a local Django user mapping to the Clerk ID
             user, created = User.objects.get_or_create(username=clerk_id)
+            
+            # Ensure DonorProfile exists
+            from .models import DonorProfile
+            DonorProfile.objects.get_or_create(
+                id=clerk_id,
+                defaults={
+                    "full_name": payload.get('name', 'Clerk User'),
+                    "phone": payload.get('phone_number', '+919999999999'),
+                    "blood_group": payload.get('blood_group', 'O+'),
+                    "is_donor": True
+                }
+            )
             return (user, None)
             
         except jwt.ExpiredSignatureError:

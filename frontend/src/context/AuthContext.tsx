@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useUser } from "@clerk/nextjs";
-import { DonorService } from "@/services/donor.service";
+import { getProfileAction, updateProfileAction } from "@/app/actions/donor.actions";
 import type { User } from "@/types";
 
 interface AuthContextValue {
@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         try {
-            const data = await DonorService.getProfile(clerkUser.id);
+            const data = await getProfileAction();
             setProfile(data as any);
         } catch (error) {
             console.error("Failed to fetch profile", error);
@@ -40,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const updateProfile = async (data: Partial<User>) => {
         if (!clerkUser?.id) return;
         try {
-            await DonorService.updateProfile(clerkUser.id, data as any);
+            await updateProfileAction(data as any);
             await fetchProfile();
         } catch (error) {
             console.error("Failed to update profile", error);

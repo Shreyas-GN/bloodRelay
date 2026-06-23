@@ -1,4 +1,4 @@
-# Environments
+# Environments — never commit real secrets
 .env
 .env.local
 .env.production
@@ -6,6 +6,11 @@
 backend/.env
 frontend/.env.local
 matching-engine/.env
+# but allow example templates
+!.env.example
+!.env.local.example
+!**/.env.example
+!**/.env.local.example
 
 # Node
 node_modules/
@@ -25,6 +30,7 @@ env/
 pip-log.txt
 pip-delete-this-directory.txt
 .pytest_cache/
+*.sqlite3
 
 # Docker
 docker-compose.override.yml
@@ -38,3 +44,9 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Claude Code tooling
+.claude/
+.agents/
+skills-lock.json
+*.tsbuildinfo

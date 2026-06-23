@@ -1,6 +1,6 @@
 {
-  "name": "BloodReach",
-  "short_name": "BloodReach",
+  "name": "BloodRelay",
+  "short_name": "BloodRelay",
   "description": "Real-time emergency blood donation platform",
   "start_url": "/",
   "display": "standalone",

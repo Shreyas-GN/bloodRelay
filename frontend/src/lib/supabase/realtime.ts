@@ -20,12 +20,8 @@ export const subscribeToChannel = (
     // Allow caller to bind events
     eventSetup(channel);
     
-    channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-            console.log(`[Realtime] Subscribed to ${channelName}`);
-        } else if (status === 'CLOSED') {
-            console.log(`[Realtime] Closed ${channelName}`);
-        } else if (status === 'CHANNEL_ERROR') {
+    channel.subscribe((status: string) => {
+        if (status === 'CHANNEL_ERROR') {
             console.error(`[Realtime] Error in ${channelName}`);
         }
     });

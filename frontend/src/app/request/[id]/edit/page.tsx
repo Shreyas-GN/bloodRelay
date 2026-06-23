@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { RequestService } from '@/services/request.service';
+import { getRequestByIdAction, updateRequestAction } from '@/app/actions/request.actions';
 import { AlertCircle, MapPin, Phone, User, Droplet, ArrowLeft, Save, Clock, Users } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -53,7 +53,7 @@ export default function EditRequestPage() {
     useEffect(() => {
         const fetchRequest = async () => {
             try {
-                const response = await RequestService.getRequestById(params.id as string);
+                const response = await getRequestByIdAction(params.id as string);
                 
                 // Security check
                 if (response.requester_id !== user?.id) {
@@ -94,7 +94,7 @@ export default function EditRequestPage() {
         setError(null);
 
         try {
-            await RequestService.updateRequest(params.id as string, formData);
+            await updateRequestAction(params.id as string, formData as any);
             router.push(`/request/${params.id}`);
         } catch (err: any) {
             setError(err.message || 'Failed to update request. Please try again.');

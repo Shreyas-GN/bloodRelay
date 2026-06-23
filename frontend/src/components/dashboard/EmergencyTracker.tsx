@@ -29,18 +29,18 @@ export function EmergencyTracker({ request, responses, isRequester }: Props) {
     const progress = Math.min((activeCount / 3) * 100, 100);
 
     return (
-        <div className="bg-zinc-900 rounded-[2rem] p-6 text-white shadow-2xl border border-zinc-800 relative overflow-hidden">
+        <div className="bg-[var(--color-base-900)] rounded-[var(--radius-card)] p-6 text-white shadow-[var(--shadow-clay-hard)] border border-white/8 relative overflow-hidden">
             {/* Background animated gradient pulse */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-crimson/20 rounded-full blur-[80px] -mr-32 -mt-32 animate-pulse" />
+            <div className="absolute top-0 right-0 w-64 h-64 bg-[rgba(185,28,28,0.2)] rounded-full blur-[80px] -mr-32 -mt-32 animate-pulse" />
 
             <div className="relative z-10">
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-                        <h3 className="font-bold text-sm text-zinc-300 uppercase tracking-widest">Live Tracker</h3>
+                        <h3 className="font-bold text-sm text-white/60 uppercase tracking-widest">Live Tracker</h3>
                     </div>
                     <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-xs font-bold font-mono">
-                        <Activity className="w-3.5 h-3.5 text-crimson" /> Phase {phase}
+                        <Activity className="w-3.5 h-3.5 text-[var(--color-blood)]" /> Phase {phase}
                     </div>
                 </div>
 
@@ -49,15 +49,15 @@ export function EmergencyTracker({ request, responses, isRequester }: Props) {
                     <div className="relative w-20 h-20 shrink-0">
                         {/* Background track */}
                         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-zinc-800" />
+                            <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-white/10" />
                             {/* Progress */}
-                            <motion.circle 
+                            <motion.circle
                                 initial={{ strokeDasharray: "0 251" }}
                                 animate={{ strokeDasharray: `${(progress / 100) * 251} 251` }}
                                 transition={{ duration: 1, ease: "easeOut" }}
-                                cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="transparent" 
-                                className="text-crimson transition-all duration-1000 ease-out" 
-                                strokeLinecap="round" 
+                                cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="8" fill="transparent"
+                                className="text-[var(--color-blood)] transition-all duration-1000 ease-out"
+                                strokeLinecap="round"
                             />
                         </svg>
                         <div className="absolute inset-0 flex items-center justify-center flex-col">
@@ -69,7 +69,7 @@ export function EmergencyTracker({ request, responses, isRequester }: Props) {
                         <h2 className="text-xl font-bold mb-1">
                             {activeCount > 0 ? `${activeCount} Donors Found` : 'Searching for Donors...'}
                         </h2>
-                        <p className="text-sm text-zinc-400">
+                        <p className="text-sm text-white/50">
                             {notified > 0 ? `Alerted ${notified} nearby people matching ${request.blood_group}` : `Scanning proximity network for ${request.blood_group}`}
                         </p>
                     </div>
@@ -79,11 +79,11 @@ export function EmergencyTracker({ request, responses, isRequester }: Props) {
                 <div className="space-y-4 mb-8">
                     <div className="flex items-start gap-4">
                         <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
-                            <AlertCircle className="w-4 h-4 text-zinc-300" />
+                            <AlertCircle className="w-4 h-4 text-white/60" />
                         </div>
                         <div>
                             <p className="text-sm font-bold">Request Broadcasted</p>
-                            <p className="text-xs text-zinc-500 mt-0.5">Radius expanded based on phase {phase} protocol</p>
+                            <p className="text-xs text-white/40 mt-0.5">Radius expanded based on phase {phase} protocol</p>
                         </div>
                     </div>
                     {activeCount > 0 && (
@@ -107,7 +107,7 @@ export function EmergencyTracker({ request, responses, isRequester }: Props) {
                 {/* Donor Cards */}
                 {sortedResponses.length > 0 && (
                     <div className="space-y-3 border-t border-white/10 pt-6">
-                        <p className="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-2">Live Responses</p>
+                        <p className="text-xs font-bold uppercase tracking-widest text-white/40 mb-2">Live Responses</p>
                         {sortedResponses.map(resp => (
                             <DonorResponseCard 
                                 key={resp.id} 

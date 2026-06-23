@@ -9,20 +9,32 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Real Push Provider Logic (Firebase Cloud Messaging)
-        if (process.env.FIREBASE_SERVER_KEY) {
-            console.log(`[FCM] Sending Push to ${tokens.length} devices`);
-            // await fetch('https://fcm.googleapis.com/fcm/send', ...)
+        const serverKey = process.env.FIREBASE_SERVER_KEY;
+        if (serverKey) {
+            const fcmResp = await fetch('https://fcm.googleapis.com/fcm/send', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `key=${serverKey}`,
+                },
+                body: JSON.stringify({
+                    registration_ids: tokens,
+                    notification: { title, body: msgBody },
+                    data: data || {},
+                }),
+            });
+            const fcmResult = await fcmResp.json();
+            console.log(`[FCM] success=${fcmResult.success ?? 0} failure=${fcmResult.failure ?? 0}`);
         } else {
-            console.log(`[MOCK PUSH] To: ${tokens.length} devices | Title: ${title}`);
+            console.log(`[FCM] FIREBASE_SERVER_KEY not set — skipping push to ${tokens.length} devices`);
         }
 
-        return NextResponse.json({ 
-            success: true, 
-            message: `Push sent to ${tokens.length} devices` 
+        return NextResponse.json({
+            success: true,
+            message: `Push sent to ${tokens.length} devices`,
         });
     } catch (error: any) {
-        console.error('Alert Error:', error);
+        console.error('Push alert error:', error);
         return NextResponse.json({ error: 'Failed to send alert' }, { status: 500 });
     }
 }

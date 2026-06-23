@@ -38,7 +38,6 @@ export async function POST(req: Request) {
     }
 
     const eventType = evt.type;
-    console.log(`[Clerk Webhook] Event: ${eventType}`);
 
     // user.created → create Supabase profile
     if (eventType === 'user.created') {
@@ -64,7 +63,6 @@ export async function POST(req: Request) {
             return new Response('Failed to sync user', { status: 500 });
         }
 
-        console.log(`[Clerk Webhook] Created profile for ${id}`);
     }
 
     // user.updated → sync name, email, phone
@@ -83,7 +81,6 @@ export async function POST(req: Request) {
             console.error('[Clerk Webhook] Failed to update profile:', error);
         }
 
-        console.log(`[Clerk Webhook] Updated profile for ${id}`);
     }
 
     // user.deleted → cascade delete profile
@@ -100,7 +97,6 @@ export async function POST(req: Request) {
             console.error('[Clerk Webhook] Failed to delete profile:', error);
         }
 
-        console.log(`[Clerk Webhook] Deleted profile for ${id}`);
     }
 
     return new Response('', { status: 200 });

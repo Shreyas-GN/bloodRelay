@@ -25,8 +25,6 @@ export class TelegramService {
       const result = await response.json();
       if (!result.ok) {
         console.error("[TELEGRAM] API Error:", result.description);
-      } else {
-        console.log("[TELEGRAM] Emergency Alert Sent Successfully");
       }
     } catch (e) {
       console.error("[TELEGRAM] Network/Fetch Error:", e);

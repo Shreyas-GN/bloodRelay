@@ -10,11 +10,11 @@ export async function POST(req: Request) {
         //     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         // }
 
-        // Find all requests that are still in SEARCHING status
+        // Find all requests that are still searching
         const { data: requests, error } = await supabaseServer
             .from('blood_requests')
             .select('*')
-            .eq('status', 'SEARCHING');
+            .eq('status', 'searching');
 
         if (error) {
             throw error;
@@ -30,22 +30,19 @@ export async function POST(req: Request) {
 
             // Phase 1 -> Phase 2 (after 5 minutes)
             if (request.escalation_phase === 1 && diffMinutes >= 5) {
-                console.log(`[Escalation] Request ${request.id} escalating to Phase 2`);
                 await AlertEngineService.executePhase2(request);
                 escalatedCount++;
             }
             // Phase 2 -> Phase 3 (after 10 minutes)
             else if (request.escalation_phase === 2 && diffMinutes >= 10) {
-                console.log(`[Escalation] Request ${request.id} escalating to Phase 3`);
                 await AlertEngineService.executePhase3(request);
                 escalatedCount++;
             }
             // Phase 3 -> Expired (after 2 hours)
             else if (request.escalation_phase === 3 && diffMinutes >= 120) {
-                console.log(`[Escalation] Request ${request.id} expired`);
                 await (supabaseServer as any)
                     .from('blood_requests')
-                    .update({ status: 'EXPIRED' })
+                    .update({ status: 'expired' })
                     .eq('id', request.id);
                 escalatedCount++;
             }

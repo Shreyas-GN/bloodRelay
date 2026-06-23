@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { RequestService } from '@/services/request.service';
+import { getRequestByIdAction } from '@/app/actions/request.actions';
 
 interface Props {
   params: { id: string };
@@ -8,7 +8,7 @@ interface Props {
 
 export async function generateMetadata({ params }: any): Promise<Metadata> {
   try {
-    const request = await RequestService.getRequestById(params.id);
+    const request = await getRequestByIdAction(params.id);
     
     if (!request) return { title: 'Request Not Found' };
 
@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
         description,
         type: 'article',
         publishedTime: request.created_at,
-        authors: ['BloodReach'],
+        authors: ['BloodRelay'],
       },
       twitter: {
         card: 'summary_large_image',
@@ -33,7 +33,7 @@ export async function generateMetadata({ params }: any): Promise<Metadata> {
     };
   } catch (error) {
     return {
-      title: 'Emergency Blood Request | BloodReach',
+      title: 'Emergency Blood Request | BloodRelay',
     };
   }
 }

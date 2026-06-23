@@ -1,91 +1,167 @@
-# 🩸 BloodReach - Emergency Blood Coordination Platform
+# BloodRelay
 
-BloodReach is an advanced emergency blood coordination platform designed to instantly connect hospitals, patients, and donors. Built with a modern, microservice-based architecture, it features real-time geospatial tracking, automated multi-tiered notification escalation, and secure API infrastructure.
-
----
-
-## 🚀 Key Features
-
-*   **Geospatial Matching Engine**: High-performance, asynchronous PostGIS queries to locate the nearest available donors instantly.
-*   **Tiered Escalation Protocol**: Automated background tasks that expand the search radius (5km → 15km → 25km) over time if a request remains unfulfilled.
-*   **Real-time Coordination**: End-to-end status tracking (Searching, Donor Accepted, Fulfilled).
-*   **Secure Authentication**: JWT-based stateless authentication powered by Clerk.
+Emergency blood coordination platform that connects hospitals, patients, and donors in real time.
 
 ---
 
-## 🏗️ Architecture Overview
+## Tech Stack
 
-The system runs on a highly decoupled microservice architecture:
-
-1.  **Frontend (Next.js)**: Client-side UI built for speed and responsiveness, deployed to Vercel.
-2.  **Core Backend (Django + DRF)**: The primary API gateway handling business logic, data validation, and request persistence.
-3.  **Matching Engine (FastAPI)**: A dedicated, asynchronous microservice handling raw spatial SQL queries and task orchestration via `BackgroundTasks`.
-4.  **Database (Supabase)**: A centralized PostgreSQL database mapped across all services with `managed=False` in Django.
-
-### 🔄 Emergency Flow
-`User (Next.js) ➔ API Request (Django) ➔ Persist to DB ➔ Async Trigger (FastAPI) ➔ Geospatial Match (PostGIS) ➔ Notify Donors`
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16, TypeScript, Tailwind CSS, Framer Motion |
+| Auth | Clerk |
+| Backend | Django 5, Django REST Framework, Gunicorn |
+| Matching Engine | FastAPI, PostGIS spatial queries |
+| Database | Supabase (PostgreSQL + PostGIS) |
+| Realtime | Supabase Realtime |
+| Push Notifications | Firebase Cloud Messaging |
+| Maps | MapLibre GL |
+| AI | Groq SDK |
+| Infra | Docker Compose, Vercel (frontend), Render/Railway (backend) |
 
 ---
 
-## 🐳 Running Locally (Docker Compose)
+## Repository Structure
 
-The entire stack is containerized for seamless local development.
-
-### Prerequisites
-*   Docker & Docker Desktop
-*   A Supabase project (with PostGIS enabled)
-*   A Clerk application
-
-### 1. Environment Setup
-Copy the placeholder environment file to set up your secrets safely:
-```bash
-cp .env.example .env
 ```
-*(Fill out the required API keys and connection strings in your local `.env` files. Ensure you do not commit these!)*
+frontend/           # Next.js app
+  src/
+    app/            # Pages and API routes (App Router)
+    components/
+      auth/         # OTPVerification
+      dashboard/    # Dashboard widgets
+      landing/      # Landing page sections
+      map/          # Map, EmergencyMap, overlays
+      nav/          # BottomNav
+      notifications/# NotificationBell, NotificationPrompt
+      request/      # Request detail components
+      ui/           # Shared UI primitives
+      wizard/       # Request creation wizard steps
+    hooks/          # useNotifications, useRealtimeAlerts
+    lib/            # Supabase, Firebase, API, utils
+    services/       # Business logic services
+    types/          # TypeScript types
 
-### 2. Start the Stack
-From the root directory, simply run:
+backend/            # Django REST API
+  config/           # Settings, URLs, WSGI/ASGI
+  core/             # Models, views, serializers, auth
+
+matching-engine/    # FastAPI geospatial matching service
+  app/
+    core/           # Database connection
+    models/         # Donor model
+    routes/         # Match endpoints
+    services/       # Matching algorithm, notifier
+
+database/           # Supabase SQL schema and migrations
+```
+
+---
+
+## Environment Variables
+
+### Frontend (`frontend/.env.local`)
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=
+GROQ_API_KEY=
+BACKEND_URL=http://localhost:8000
+MATCHING_ENGINE_URL=http://localhost:9000
+TELEGRAM_BOT_TOKEN=
+```
+
+### Backend (`backend/.env`)
+
+```env
+DATABASE_URL=
+DJANGO_SECRET_KEY=
+CLERK_SECRET_KEY=
+MATCHING_ENGINE_URL=http://localhost:9000
+ALLOWED_HOSTS=localhost,127.0.0.1
+CORS_ALLOWED_ORIGINS=http://localhost:3000
+```
+
+### Matching Engine (`matching-engine/.env`)
+
+```env
+DATABASE_URL=
+CORS_ORIGINS=http://localhost:3000,http://localhost:8000
+```
+
+---
+
+## Running Locally
+
+### Option A — Docker Compose (full stack)
+
 ```bash
 docker-compose up --build
 ```
 
-**Services will be available at:**
-*   Frontend: `http://localhost:3000`
-*   Django API: `http://localhost:8000`
-*   FastAPI Engine: `http://localhost:9000`
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Django API | http://localhost:8000 |
+| FastAPI Engine | http://localhost:9000 |
+
+### Option B — Individual services
+
+**Frontend**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+**Django backend**
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+```
+
+**FastAPI matching engine**
+
+```bash
+cd matching-engine
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 9000
+```
 
 ---
 
-## 🌍 Production Deployment
+## Database
 
-The architecture is built for horizontal scalability and safe deployment on standard PaaS providers.
+SQL schema and migration files are in `database/`.
 
-### 1. Database (Supabase)
-*   Ensure your Supabase PostgreSQL instance has the PostGIS extension enabled.
-*   **Important**: Use the **Connection Pooler URL (Port 6543)** in production to prevent connection exhaustion.
+Apply them to your Supabase project via the SQL editor or Supabase CLI:
 
-### 2. Matching Engine (FastAPI on Render / Railway)
-*   Deploy using the `matching-engine/Dockerfile`.
-*   The `CMD` automatically binds to the `$PORT` environment variable.
-*   **Required ENV**: `DATABASE_URL`, `CORS_ORIGINS`.
+```bash
+supabase db push
+```
 
-### 3. Core Backend (Django on Render / Railway)
-*   Deploy using the `backend/Dockerfile` (Uses Gunicorn).
-*   **Required ENV**: `DATABASE_URL`, `DJANGO_SECRET_KEY`, `CLERK_SECRET_KEY`, `MATCHING_ENGINE_URL`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`.
-
-### 4. Frontend (Next.js on Vercel)
-*   Deploy standard Next.js build.
-*   **Required ENV**: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `BACKEND_URL`.
+PostGIS must be enabled on the Supabase project before applying the schema.
 
 ---
 
-## 🛡️ Security Posture
+## Production Deployment
 
-*   **Zero Exposed Secrets**: All sensitive tokens and connection strings are securely injected via CI/CD environment variables.
-*   **Cross-Origin Protection**: Strict, environment-driven CORS policies for Django and FastAPI.
-*   **No Direct DB Access**: The frontend routes all mutations through the secured Django API gateway, preventing direct Supabase exposure.
-
----
-
-*BloodReach is built to save lives through code.*
-
+- **Frontend**: Deploy `frontend/` to Vercel. Add all `NEXT_PUBLIC_*` and server-side env vars in the Vercel dashboard.
+- **Backend**: Deploy `backend/` to Render or Railway using `backend/Dockerfile`.
+- **Matching Engine**: Deploy `matching-engine/` using `matching-engine/Dockerfile`. Set `$PORT` env var.
+- **Database**: Use Supabase connection pooler URL (port 6543) in production.

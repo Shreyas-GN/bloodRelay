@@ -1,34 +1,26 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { useUser, useClerk } from '@clerk/nextjs';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { motion, AnimatePresence } from 'framer-motion';
-import {
-    Bell, Shield, Power, MapPin,
-    ArrowLeft, AlertTriangle, ChevronRight, User, Droplet, Calendar, CheckCircle, Edit2
-} from 'lucide-react';
+import { useState, useEffect } from "react";
+import { useUser, useClerk } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, ChevronRight, Droplet, Edit2, Power } from "lucide-react";
+import { Switch } from "@/components/ui/Switch";
+import { Slider } from "@/components/ui/Slider";
+import { BottomNav } from "@/components/nav/BottomNav";
+import { getProfileAction, updateProfileAction } from "@/app/actions/donor.actions";
 
-import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
-import { Switch } from '@/components/ui/Switch';
-import { Slider } from '@/components/ui/Slider';
-import { Input } from '@/components/ui/Input';
-
-// --- Types ---
 interface UserSettings {
     auto_disable_on_accept: boolean;
     auto_disable_after_donation: boolean;
     notification_distance_km: number;
-    emergency_types: 'IMMEDIATE' | 'ALL';
+    emergency_types: "IMMEDIATE" | "ALL";
     push_notifications: boolean;
     status_updates: boolean;
     show_phone_number: boolean;
     share_location: boolean;
     language: string;
-    text_size: 'NORMAL' | 'LARGE';
+    text_size: "NORMAL" | "LARGE";
     is_paused: boolean;
 }
 
@@ -44,101 +36,121 @@ interface UserProfile {
     last_donation_date: string | null;
 }
 
-type SettingsView = 'MENU' | 'PROFILE' | 'AVAILABILITY' | 'NOTIFICATIONS' | 'PRIVACY' | 'ACCOUNT';
-
-// --- Animations ---
-const slideIn = {
-    initial: { opacity: 0, x: 20 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -20 },
-    transition: { duration: 0.2 }
-};
-
-// --- Components ---
-const MenuItem = ({
-    icon,
+/* ── Section wrapper ─────────────────────────────────── */
+function Section({
     title,
-    subtitle,
-    onClick,
-    bgClass,
-    textClass
+    children,
+    danger,
 }: {
-    icon: React.ReactNode,
-    title: string,
-    subtitle?: string,
-    onClick: () => void,
-    bgClass: string,
-    textClass: string
-}) => (
-    <div onClick={onClick} className="bg-white dark:bg-zinc-900 p-4 rounded-2xl border border-zinc-200/50 dark:border-white/10 shadow-[0_2px_8px_rgb(0,0,0,0.04)] flex items-center justify-between cursor-pointer hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-        <div className="flex items-center gap-4">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${bgClass} ${textClass}`}>
-                {icon}
+    title?: string;
+    children: React.ReactNode;
+    danger?: boolean;
+}) {
+    return (
+        <section>
+            {title && (
+                <h2
+                    className={`text-[17px] font-bold mb-3 ${
+                        danger ? "text-[var(--color-danger)]" : "text-[var(--color-text-primary)]"
+                    }`}
+                >
+                    {title}
+                </h2>
+            )}
+            <div
+                className={`bg-[var(--color-bg-elevated)] rounded-[var(--radius-card)] border overflow-hidden ${
+                    danger ? "border-[var(--color-danger-light)]" : "border-[var(--color-border)]"
+                }`}
+                style={{ boxShadow: "var(--shadow-card)" }}
+            >
+                {children}
             </div>
-            <div>
-                <h3 className="font-bold text-zinc-900 dark:text-white">{title}</h3>
-                {subtitle && <p className="text-xs text-zinc-500 font-medium">{subtitle}</p>}
+        </section>
+    );
+}
+
+/* ── Row inside a section ────────────────────────────── */
+function Row({
+    label,
+    sub,
+    right,
+    border = true,
+}: {
+    label: string;
+    sub?: string;
+    right?: React.ReactNode;
+    border?: boolean;
+}) {
+    return (
+        <div
+            className={`px-6 py-4 flex items-center justify-between gap-4 ${
+                border ? "border-b border-[var(--color-border-subtle)]" : ""
+            }`}
+        >
+            <div className="min-w-0">
+                <p className="text-[15px] font-semibold text-[var(--color-text-primary)]">{label}</p>
+                {sub && <p className="text-[13px] text-[var(--color-text-muted)] mt-0.5">{sub}</p>}
             </div>
+            {right && <div className="shrink-0">{right}</div>}
         </div>
-        <ChevronRight className="w-5 h-5 text-zinc-400" />
-    </div>
-);
+    );
+}
 
 export default function SettingsPage() {
     const { user, isLoaded } = useUser();
     const { signOut } = useClerk();
     const router = useRouter();
 
-    // State
-    const [view, setView] = useState<SettingsView>('MENU');
     const [settings, setSettings] = useState<UserSettings | null>(null);
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
-
     const [isEditingProfile, setIsEditingProfile] = useState(false);
-    const [profileFormData, setProfileFormData] = useState({ city: '', blood_group: '' });
+    const [profileFormData, setProfileFormData] = useState({ city: "", blood_group: "" });
+    const [savingProfile, setSavingProfile] = useState(false);
+    const [profileError, setProfileError] = useState<string | null>(null);
 
-    // --- Effects ---
     useEffect(() => {
         const fetchData = async () => {
             try {
                 if (!user) return;
-                const { DonorService } = await import('@/services/donor.service');
-                const profileData = await DonorService.getProfile(user.id).catch(() => null);
-                
+                const profileData = await getProfileAction().catch(() => null);
+
                 setSettings({
                     auto_disable_on_accept: true,
                     auto_disable_after_donation: false,
                     notification_distance_km: 10,
-                    emergency_types: 'ALL',
+                    emergency_types: "ALL",
                     push_notifications: true,
                     status_updates: true,
                     show_phone_number: true,
                     share_location: false,
-                    language: 'en',
-                    text_size: 'NORMAL',
-                    is_paused: false
+                    language: "en",
+                    text_size: "NORMAL",
+                    is_paused: false,
                 });
-                
+
                 if (profileData) {
                     setProfile({
                         id: 1,
-                        first_name: profileData.full_name?.split(' ')[0] || user.firstName || '',
-                        last_name: profileData.full_name?.split(' ').slice(1).join(' ') || user.lastName || '',
-                        blood_group: profileData.blood_group,
-                        city: profileData.location || '',
-                        phone_number: profileData.phone || '',
+                        first_name: profileData.full_name?.split(" ")[0] || user.firstName || "",
+                        last_name:
+                            profileData.full_name?.split(" ").slice(1).join(" ") ||
+                            user.lastName ||
+                            "",
+                        blood_group: profileData.blood_group ?? "",
+                        city: profileData.location || "",
+                        phone_number: profileData.phone || "",
                         is_available_donor: profileData.is_available_donor,
                         date_joined: profileData.created_at,
-                        last_donation_date: null
+                        last_donation_date: null,
                     });
                     setProfileFormData({
-                        city: profileData.location || '',
-                        blood_group: profileData.blood_group || ''
+                        city: profileData.location || "",
+                        blood_group: profileData.blood_group || "",
                     });
                 }
-            } catch (error) {
-                console.error('Failed to load data', error);
+            } catch {
+                // silently ignore profile load failure
             } finally {
                 setLoading(false);
             }
@@ -148,389 +160,454 @@ export default function SettingsPage() {
             if (user) {
                 fetchData();
             } else {
-                router.push('/');
+                router.push("/");
             }
         }
     }, [isLoaded, user, router]);
 
-    // --- Handlers ---
     const updateSetting = async (key: keyof UserSettings, value: any) => {
         if (!settings) return;
-        const prevSettings = { ...settings };
+        const prev = { ...settings };
         setSettings({ ...settings, [key]: value });
         try {
-            console.log("Setting updated", key, value);
-        } catch (error) {
-            setSettings(prevSettings);
+            // setting persisted optimistically
+        } catch {
+            setSettings(prev);
         }
     };
 
     const toggleAvailability = async (checked: boolean) => {
-        if (!profile || !user) return;
-        const prev = profile.is_available_donor;
-        setProfile({ ...profile, is_available_donor: checked });
+        if (!user) return;
+        const prev = profile?.is_available_donor || false;
+        setProfile((p) =>
+            p
+                ? { ...p, is_available_donor: checked }
+                : {
+                      id: 1,
+                      first_name: user.firstName || "",
+                      last_name: user.lastName || "",
+                      blood_group: "",
+                      city: "",
+                      phone_number: "",
+                      is_available_donor: checked,
+                      date_joined: new Date().toISOString(),
+                      last_donation_date: null,
+                  }
+        );
         try {
-            const { DonorService } = await import('@/services/donor.service');
-            await DonorService.updateProfile(user.id, { is_available_donor: checked });
-        } catch (error) {
-            setProfile({ ...profile, is_available_donor: prev });
+            await updateProfileAction({ is_available_donor: checked });
+        } catch {
+            setProfile((p) => (p ? { ...p, is_available_donor: prev } : null));
         }
     };
 
     const saveProfile = async () => {
-        if (!profile || !user) return;
+        if (!user) return;
+        setSavingProfile(true);
+        setProfileError(null);
         try {
-            const { DonorService } = await import('@/services/donor.service');
-            await DonorService.updateProfile(user.id, { 
+            await updateProfileAction({
                 location: profileFormData.city,
-                blood_group: profileFormData.blood_group
+                blood_group: profileFormData.blood_group as any,
             });
-            setProfile({
-                ...profile,
-                city: profileFormData.city,
-                blood_group: profileFormData.blood_group
-            });
+            setProfile((p) =>
+                p
+                    ? { ...p, city: profileFormData.city, blood_group: profileFormData.blood_group }
+                    : {
+                          id: 1,
+                          first_name: user.firstName || "",
+                          last_name: user.lastName || "",
+                          blood_group: profileFormData.blood_group,
+                          city: profileFormData.city,
+                          phone_number: "",
+                          is_available_donor: false,
+                          date_joined: new Date().toISOString(),
+                          last_donation_date: null,
+                      }
+            );
             setIsEditingProfile(false);
-        } catch (error) {
-            console.error('Failed to update profile', error);
+        } catch {
+            setProfileError("Couldn't save changes. Please try again.");
+        } finally {
+            setSavingProfile(false);
         }
     };
 
-    if (loading) return <div className="h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950"><div className="w-8 h-8 rounded-full border-2 border-zinc-200 dark:border-zinc-800 border-t-crimson animate-spin" /></div>;
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-[var(--color-bg)]">
+                <header className="sticky top-0 z-40 border-b border-[var(--color-border-subtle)] h-16" style={{ background: "rgba(252,252,251,0.92)" }} />
+                <main className="max-w-xl mx-auto px-6 pt-8 space-y-8">
+                    <div className="bg-white rounded-[28px] border border-[var(--color-border)] p-6 flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-full bg-[var(--color-base-100)] animate-[skeleton-pulse_1.5s_ease-in-out_infinite] shrink-0" />
+                        <div className="flex-1 space-y-2">
+                            <div className="h-4 w-32 bg-[var(--color-base-100)] rounded-full animate-[skeleton-pulse_1.5s_ease-in-out_infinite]" />
+                            <div className="h-3 w-48 bg-[var(--color-base-100)] rounded-full animate-[skeleton-pulse_1.5s_ease-in-out_infinite]" />
+                        </div>
+                    </div>
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="bg-white rounded-[28px] border border-[var(--color-border)] overflow-hidden">
+                            {[...Array(3)].map((_, j) => (
+                                <div key={j} className="px-6 py-4 flex items-center justify-between border-b border-[var(--color-border-subtle)] last:border-b-0">
+                                    <div className="space-y-1.5">
+                                        <div className="h-3.5 w-28 bg-[var(--color-base-100)] rounded-full animate-[skeleton-pulse_1.5s_ease-in-out_infinite]" />
+                                        <div className="h-3 w-40 bg-[var(--color-base-100)] rounded-full animate-[skeleton-pulse_1.5s_ease-in-out_infinite]" />
+                                    </div>
+                                    <div className="h-6 w-10 bg-[var(--color-base-100)] rounded-full animate-[skeleton-pulse_1.5s_ease-in-out_infinite]" />
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                </main>
+            </div>
+        );
+    }
+
     if (!settings) return null;
 
-    // --- Sub-Views ---
+    const displayName =
+        profile?.first_name && profile?.last_name
+            ? `${profile.first_name} ${profile.last_name}`
+            : user?.firstName
+            ? `${user.firstName} ${user.lastName || ""}`.trim()
+            : "My Profile";
 
-    const ProfileView = () => (
-        <div className="space-y-6">
-            <Card variant="default">
-                <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <CardTitle className="flex items-center gap-2">
-                                <User className="w-5 h-5 text-zinc-600" />
-                                Personal Profile
-                            </CardTitle>
-                            <CardDescription>Manage your personal details</CardDescription>
-                        </div>
-                        {isEditingProfile ? (
-                            <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={() => setIsEditingProfile(false)}>Cancel</Button>
-                                <Button size="sm" onClick={saveProfile}>Save</Button>
-                            </div>
-                        ) : (
-                            <Button variant="ghost" size="sm" onClick={() => setIsEditingProfile(true)}>
-                                <Edit2 className="w-4 h-4 mr-2" /> Edit
-                            </Button>
-                        )}
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-full bg-zinc-200 overflow-hidden">
-                            <img src={user?.imageUrl} alt="Profile" className="w-full h-full object-cover" />
-                        </div>
-                        <div>
-                            <h2 className="text-lg font-bold text-zinc-900 dark:text-white">{profile?.first_name} {profile?.last_name}</h2>
-                            <p className="text-sm text-zinc-500">{user?.primaryEmailAddress?.emailAddress}</p>
-                            <Badge variant="success" className="text-xs mt-1">Verified</Badge>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-xs font-bold text-zinc-500 uppercase">Phone</label>
-                            <p className="font-medium text-zinc-900 dark:text-white">{profile?.phone_number}</p>
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-zinc-500 uppercase">Member Since</label>
-                            <p className="font-medium text-zinc-900 dark:text-white">{profile?.date_joined ? new Date(profile.date_joined).toLocaleDateString() : 'N/A'}</p>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+    const memberSince = profile?.date_joined
+        ? new Date(profile.date_joined).toLocaleDateString("en-IN", {
+              month: "long",
+              year: "numeric",
+          })
+        : null;
 
-            <Card variant="default">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Droplet className="w-5 h-5 text-brand-red" /> Blood Information</CardTitle>
-                    <CardDescription>Your donor status and blood group</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg border border-red-100">
-                        <div>
-                            <p className="text-sm text-red-800 font-medium">Blood Group</p>
-                            {isEditingProfile ? (
-                                <select
-                                    value={profileFormData.blood_group}
-                                    onChange={(e) => setProfileFormData({ ...profileFormData, blood_group: e.target.value })}
-                                    className="mt-1 block w-24 rounded-md border-gray-300 shadow-sm"
-                                >
-                                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
-                                </select>
-                            ) : (
-                                <p className="text-2xl font-bold text-red-900">{profile?.blood_group || 'Not Set'}</p>
-                            )}
-                        </div>
-                        <Droplet className="w-8 h-8 text-red-500" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="font-semibold text-gray-900">Donor Status</p>
-                            <p className="text-sm text-gray-500">{profile?.is_available_donor ? "✅ Available Donor" : "⛔ Not Available"}</p>
-                        </div>
-                        <Switch checked={profile?.is_available_donor || false} onCheckedChange={toggleAvailability} />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card variant="default">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><MapPin className="w-5 h-5 text-blue-500" /> Location</CardTitle>
-                    <CardDescription>Your operating city</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <label className="text-sm font-medium text-gray-700">Current City</label>
-                    {isEditingProfile ? (
-                        <Input value={profileFormData.city} onChange={(e) => setProfileFormData({ ...profileFormData, city: e.target.value })} className="mt-1" placeholder="City" />
-                    ) : (
-                        <p className="text-lg font-medium text-gray-900">{profile?.city || 'Not Set'}</p>
-                    )}
-                </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-2 gap-4">
-                <Card variant="elevated">
-                    <CardContent className="p-4 text-center">
-                        <Calendar className="w-6 h-6 text-purple-600 mx-auto mb-2" />
-                        <p className="text-xs text-gray-500">Last Donation</p>
-                        <p className="font-bold text-gray-900">{profile?.last_donation_date || 'Never'}</p>
-                    </CardContent>
-                </Card>
-                <Card variant="elevated">
-                    <CardContent className="p-4 text-center">
-                        <CheckCircle className="w-6 h-6 text-orange-600 mx-auto mb-2" />
-                        <p className="text-xs text-gray-500">Lives Impacted</p>
-                        <p className="font-bold text-gray-900">0</p>
-                    </CardContent>
-                </Card>
-            </div>
-        </div>
-    );
-
-    const AvailabilityView = () => (
-        <Card variant="default">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-orange-500" />
-                    Availability & Safe Guards
-                </CardTitle>
-                <CardDescription>Control when you receive emergency requests</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <div className="space-y-3">
-                    <div className="flex justify-between">
-                        <label className="text-sm font-medium text-gray-700">Notification Distance</label>
-                        <span className="text-sm font-bold text-brand-blue">{settings.notification_distance_km} km</span>
-                    </div>
-                    <Slider
-                        value={[settings.notification_distance_km]}
-                        min={1} max={50} step={1}
-                        onValueChange={(val: number[]) => updateSetting('notification_distance_km', val[0])}
-                    />
-                </div>
-                <div className="border-t border-gray-100 pt-4 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <label className="text-sm font-medium text-gray-900">Auto-disable on Accept</label>
-                        </div>
-                        <Switch
-                            checked={settings.auto_disable_on_accept}
-                            onCheckedChange={(checked: boolean) => updateSetting('auto_disable_on_accept', checked)}
-                        />
-                    </div>
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm font-medium text-gray-900">Emergency Type</label>
-                        <select
-                            className="text-sm border-gray-300 rounded-md"
-                            value={settings.emergency_types}
-                            onChange={(e) => updateSetting('emergency_types', e.target.value)}
-                        >
-                            <option value="ALL">All Urgent</option>
-                            <option value="IMMEDIATE">Immediate Only</option>
-                        </select>
-                    </div>
-                </div>
-            </CardContent>
-        </Card>
-    );
-
-    const NotificationView = () => (
-        <Card variant="default">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Bell className="w-5 h-5 text-blue-500" /> Notifications</CardTitle>
-                <CardDescription>Manage your alerts and updates</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-900">Push Notifications</label>
-                    <Switch checked={settings.push_notifications} onCheckedChange={(c: boolean) => updateSetting('push_notifications', c)} />
-                </div>
-                <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-900">Status Updates</label>
-                    <Switch checked={settings.status_updates} onCheckedChange={(c: boolean) => updateSetting('status_updates', c)} />
-                </div>
-            </CardContent>
-        </Card>
-    );
-
-    const PrivacyView = () => (
-        <Card variant="default">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2"><Shield className="w-5 h-5 text-green-500" /> Privacy & Safety</CardTitle>
-                <CardDescription>Control your data visibility</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <label className="text-sm font-medium text-gray-900">Show Phone Number</label>
-                        <p className="text-xs text-gray-500">Only after accepting request</p>
-                    </div>
-                    <Switch checked={settings.show_phone_number} onCheckedChange={(c: boolean) => updateSetting('show_phone_number', c)} />
-                </div>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <label className="text-sm font-medium text-gray-900">Share Exact Location</label>
-                        <p className="text-xs text-gray-500">Only after accepting request</p>
-                    </div>
-                    <Switch checked={settings.share_location} onCheckedChange={(c: boolean) => updateSetting('share_location', c)} />
-                </div>
-            </CardContent>
-        </Card>
-    );
-
-    const AccountView = () => (
-        <Card variant="default" className="border-red-100">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-700"><Power className="w-5 h-5" /> Account Actions</CardTitle>
-                <CardDescription>Manage login and security</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <Button variant="outline" className="w-full" onClick={() => signOut(() => router.push('/'))}>Log Out</Button>
-                <Button variant="ghost" className="w-full text-red-600" onClick={() => alert('Deactivate?')}>Deactivate Account</Button>
-            </CardContent>
-        </Card>
-    );
+    const fieldClass =
+        "h-9 px-3 bg-[var(--color-base-100)] border-0 text-[var(--color-text-primary)] text-[14px] font-semibold rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#D63A3A]/15 transition-all";
 
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 pb-20">
-            {/* Header */}
-            <header className="sticky top-0 z-50 bg-zinc-50/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200/50 dark:border-white/10">
-                <nav className="max-w-3xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        {view !== 'MENU' ? (
-                            <button onClick={() => setView('MENU')} className="p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors">
-                                <ArrowLeft className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
-                            </button>
-                        ) : (
-                            <Link href="/dashboard" className="flex items-center gap-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
-                                <ArrowLeft className="w-5 h-5" />
-                                <span className="font-medium text-sm">Dashboard</span>
-                            </Link>
-                        )}
-                    </div>
-                    <h1 className="text-lg font-bold text-zinc-900 dark:text-white">
-                        {view === 'MENU' ? 'Settings' :
-                            view === 'PROFILE' ? 'My Profile' :
-                                view === 'AVAILABILITY' ? 'Availability' :
-                                    view === 'NOTIFICATIONS' ? 'Notifications' :
-                                        view === 'PRIVACY' ? 'Privacy' : 'Account'}
-                    </h1>
-                    <div className="w-8"></div>
-                </nav>
+        <div className="min-h-screen bg-[var(--color-bg)] pb-24">
+            {/* Sticky header */}
+            <header
+                className="sticky top-0 z-40 border-b border-[var(--color-border-subtle)] h-16"
+                style={{ background: "rgba(252,252,251,0.92)", backdropFilter: "blur(16px)" }}
+            >
+                <div className="max-w-xl mx-auto px-6 h-16 flex items-center justify-between">
+                    <Link
+                        href="/dashboard"
+                        className="flex items-center gap-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span className="text-sm font-medium">Dashboard</span>
+                    </Link>
+                    <h1 className="text-[15px] font-bold text-[var(--color-text-primary)]">Settings</h1>
+                    <div className="w-20" />
+                </div>
             </header>
 
-            <main className="max-w-3xl mx-auto px-4 py-8">
-                <AnimatePresence mode="wait">
-                    {view === 'MENU' ? (
-                        <motion.div
-                            key="menu"
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="space-y-4"
-                        >
-                            {/* Profile Card Refactored to match others manually for image specific */}
-                            <MenuItem
-                                icon={
-                                    <div className="w-full h-full relative">
-                                        <img
-                                            src={user?.imageUrl}
-                                            alt="Profile"
-                                            className="w-full h-full object-cover"
-                                        />
-                                    </div>
+            <main className="max-w-xl mx-auto px-6 pt-8 space-y-8">
+
+                {/* ── Profile hero ───────────────────────────────────────── */}
+                <div className="card-base p-6 flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-full overflow-hidden bg-[var(--color-base-100)] shrink-0 border border-[var(--color-border)]">
+                        {user?.imageUrl ? (
+                            <img
+                                src={user.imageUrl}
+                                alt="Profile"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[var(--color-text-muted)] text-xl font-bold">
+                                {displayName[0]}
+                            </div>
+                        )}
+                    </div>
+                    <div className="min-w-0">
+                        <p className="text-[17px] font-bold text-[var(--color-text-primary)] truncate">{displayName}</p>
+                        <p className="text-[13px] text-[var(--color-text-muted)] truncate mt-0.5">
+                            {user?.primaryEmailAddress?.emailAddress}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            {profile?.blood_group && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-50 text-[#D63A3A] text-[11px] font-bold border border-[var(--color-danger-light)]">
+                                    <Droplet className="w-3 h-3" />
+                                    {profile.blood_group}
+                                </span>
+                            )}
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-100">
+                                ✓ Verified
+                            </span>
+                            {memberSince && (
+                                <span className="text-[11px] text-[var(--color-text-muted)] font-medium">
+                                    Since {memberSince}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Profile Information ────────────────────────────────── */}
+                <Section title="Profile Information">
+                    <Row
+                        label="Blood Group"
+                        sub="Shown to accepted donors"
+                        right={
+                            isEditingProfile ? (
+                                <select
+                                    value={profileFormData.blood_group}
+                                    onChange={(e) =>
+                                        setProfileFormData({
+                                            ...profileFormData,
+                                            blood_group: e.target.value,
+                                        })
+                                    }
+                                    className={fieldClass + " w-24"}
+                                >
+                                    {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((bg) => (
+                                        <option key={bg} value={bg}>
+                                            {bg}
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <span className="text-[15px] font-bold text-[#D63A3A]">
+                                    {profile?.blood_group || "—"}
+                                </span>
+                            )
+                        }
+                    />
+                    <Row
+                        label="City"
+                        sub="Used for donor matching"
+                        right={
+                            isEditingProfile ? (
+                                <input
+                                    value={profileFormData.city}
+                                    onChange={(e) =>
+                                        setProfileFormData({ ...profileFormData, city: e.target.value })
+                                    }
+                                    placeholder="City"
+                                    className={fieldClass + " w-36 text-right"}
+                                />
+                            ) : (
+                                <span className="text-[15px] font-semibold text-[var(--color-text-muted)]">
+                                    {profile?.city || "—"}
+                                </span>
+                            )
+                        }
+                    />
+                    <Row
+                        label="Phone"
+                        right={
+                            <span className="text-[15px] font-semibold text-[var(--color-text-muted)]">
+                                {profile?.phone_number || "—"}
+                            </span>
+                        }
+                        border={false}
+                    />
+
+                    {/* Edit controls */}
+                    <div className="px-6 py-4 border-t border-[var(--color-border-subtle)]">
+                        {profileError && (
+                            <p className="text-[12px] text-[#DC2626] font-medium mb-3">{profileError}</p>
+                        )}
+                        <div className="flex justify-end gap-2">
+                        {isEditingProfile ? (
+                            <>
+                                <button
+                                    onClick={() => setIsEditingProfile(false)}
+                                    className="h-8 px-4 text-[13px] font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={saveProfile}
+                                    disabled={savingProfile}
+                                    className="h-8 px-5 bg-[#1E1E1E] text-white text-[13px] font-semibold rounded-[10px] hover:bg-[#2a2a2a] transition-colors disabled:opacity-50"
+                                >
+                                    {savingProfile ? "Saving…" : "Save changes"}
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={() => setIsEditingProfile(true)}
+                                className="h-8 px-4 text-[13px] font-semibold text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors flex items-center gap-1.5"
+                            >
+                                <Edit2 className="w-3.5 h-3.5" />
+                                Edit
+                            </button>
+                        )}
+                        </div>
+                    </div>
+                </Section>
+
+                {/* ── Availability ───────────────────────────────────────── */}
+                <Section title="Availability">
+                    <Row
+                        label="Available to donate"
+                        sub="Requests will be sent to you"
+                        right={
+                            <Switch
+                                checked={profile?.is_available_donor || false}
+                                onCheckedChange={toggleAvailability}
+                            />
+                        }
+                    />
+
+                    {/* Distance slider */}
+                    <div className="px-6 py-4 border-b border-[var(--color-border-subtle)]">
+                        <div className="flex items-center justify-between mb-3">
+                            <div>
+                                <p className="text-[15px] font-semibold text-[var(--color-text-primary)]">
+                                    Notification distance
+                                </p>
+                                <p className="text-[13px] text-[var(--color-text-muted)] mt-0.5">
+                                    Requests within this range
+                                </p>
+                            </div>
+                            <span className="text-[15px] font-bold text-[#D63A3A] tabular-nums">
+                                {settings.notification_distance_km} km
+                            </span>
+                        </div>
+                        <Slider
+                            value={[settings.notification_distance_km]}
+                            min={1}
+                            max={50}
+                            step={1}
+                            onValueChange={(val: number[]) =>
+                                updateSetting("notification_distance_km", val[0])
+                            }
+                        />
+                    </div>
+
+                    <Row
+                        label="Auto-disable on accept"
+                        sub="Stop receiving requests after you accept one"
+                        right={
+                            <Switch
+                                checked={settings.auto_disable_on_accept}
+                                onCheckedChange={(c: boolean) =>
+                                    updateSetting("auto_disable_on_accept", c)
                                 }
-                                title={
-                                    (profile?.first_name && profile?.last_name)
-                                        ? `${profile.first_name} ${profile.last_name}`
-                                        : (user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'My Profile')
-                                }
-                                subtitle="View & Edit Profile"
-                                onClick={() => setView('PROFILE')}
-                                bgClass="bg-gray-200 overflow-hidden border border-gray-100 p-0"
-                                textClass=""
                             />
+                        }
+                    />
 
-                            <MenuItem
-                                icon={<AlertTriangle className="w-5 h-5" />}
-                                title="Availability & Safety"
-                                subtitle="Distance, Emergency filter"
-                                onClick={() => setView('AVAILABILITY')}
-                                bgClass="bg-amber-500/10"
-                                textClass="text-amber-600"
-                            />
-
-                            <MenuItem
-                                icon={<Bell className="w-5 h-5" />}
-                                title="Notifications"
-                                subtitle="Push, Status updates"
-                                onClick={() => setView('NOTIFICATIONS')}
-                                bgClass="bg-zinc-100 dark:bg-white/5"
-                                textClass="text-zinc-600 dark:text-zinc-400"
-                            />
-
-                            <MenuItem
-                                icon={<Shield className="w-5 h-5" />}
-                                title="Privacy & Safety"
-                                subtitle="Visibility controls"
-                                onClick={() => setView('PRIVACY')}
-                                bgClass="bg-emerald-500/10"
-                                textClass="text-emerald-600"
-                            />
-
-                            <MenuItem
-                                icon={<Power className="w-5 h-5" />}
-                                title="Account"
-                                subtitle="Logout, Deactivate"
-                                onClick={() => setView('ACCOUNT')}
-                                bgClass="bg-zinc-100 dark:bg-white/5"
-                                textClass="text-zinc-600 dark:text-zinc-400"
-                            />
-                        </motion.div>
-                    ) : (
-                        <motion.div
-                            key="content"
-                            variants={slideIn}
-                            initial="initial" animate="animate" exit="exit"
+                    <div className="px-6 py-4 flex items-center justify-between border-[var(--color-border-subtle)]">
+                        <div>
+                            <p className="text-[15px] font-semibold text-[var(--color-text-primary)]">Request type</p>
+                            <p className="text-[13px] text-[var(--color-text-muted)] mt-0.5">
+                                Which urgency levels to receive
+                            </p>
+                        </div>
+                        <select
+                            value={settings.emergency_types}
+                            onChange={(e) => updateSetting("emergency_types", e.target.value)}
+                            className="h-9 px-3 bg-[var(--color-base-100)] border-0 text-[var(--color-text-primary)] text-[14px] font-semibold rounded-[10px] focus:outline-none appearance-none cursor-pointer"
                         >
-                            {view === 'PROFILE' && <ProfileView />}
-                            {view === 'AVAILABILITY' && <AvailabilityView />}
-                            {view === 'NOTIFICATIONS' && <NotificationView />}
-                            {view === 'PRIVACY' && <PrivacyView />}
-                            {view === 'ACCOUNT' && <AccountView />}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                            <option value="ALL">All urgent</option>
+                            <option value="IMMEDIATE">Immediate only</option>
+                        </select>
+                    </div>
+                </Section>
+
+                {/* ── Notifications & Privacy ────────────────────────────── */}
+                <Section title="Notifications & Privacy">
+                    <Row
+                        label="Push notifications"
+                        sub="Emergency alerts on your device"
+                        right={
+                            <Switch
+                                checked={settings.push_notifications}
+                                onCheckedChange={(c: boolean) =>
+                                    updateSetting("push_notifications", c)
+                                }
+                            />
+                        }
+                    />
+                    <Row
+                        label="Status updates"
+                        sub="When your request status changes"
+                        right={
+                            <Switch
+                                checked={settings.status_updates}
+                                onCheckedChange={(c: boolean) =>
+                                    updateSetting("status_updates", c)
+                                }
+                            />
+                        }
+                    />
+                    <Row
+                        label="Show phone number"
+                        sub="Only after accepting a request"
+                        right={
+                            <Switch
+                                checked={settings.show_phone_number}
+                                onCheckedChange={(c: boolean) =>
+                                    updateSetting("show_phone_number", c)
+                                }
+                            />
+                        }
+                    />
+                    <Row
+                        label="Share exact location"
+                        sub="Only after accepting a request"
+                        border={false}
+                        right={
+                            <Switch
+                                checked={settings.share_location}
+                                onCheckedChange={(c: boolean) =>
+                                    updateSetting("share_location", c)
+                                }
+                            />
+                        }
+                    />
+                </Section>
+
+                {/* ── Account ────────────────────────────────────────────── */}
+                <Section title="Account">
+                    <button
+                        onClick={() => signOut(() => router.push("/"))}
+                        className="w-full px-6 py-4 flex items-center justify-between hover:bg-[var(--color-bg)] transition-colors group"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-[12px] bg-[var(--color-base-100)] flex items-center justify-center group-hover:bg-[var(--color-border)] transition-colors">
+                                <Power className="w-4 h-4 text-[var(--color-text-muted)]" />
+                            </div>
+                            <span className="text-[15px] font-semibold text-[var(--color-text-primary)]">Log out</span>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-[var(--color-text-muted)]" />
+                    </button>
+                </Section>
+
+                {/* ── Danger Zone ────────────────────────────────────────── */}
+                <div
+                    className="rounded-[var(--radius-card)] border border-[var(--color-danger-light)] overflow-hidden bg-[var(--color-bg-elevated)]"
+                    style={{ boxShadow: "var(--shadow-card)" }}
+                >
+                    <div className="px-6 py-4 border-b border-[var(--color-border-subtle)]">
+                        <h2 className="text-[15px] font-bold text-[var(--color-danger)]">Danger zone</h2>
+                        <p className="text-[13px] text-[var(--color-text-muted)] mt-0.5">
+                            These actions are permanent and cannot be undone.
+                        </p>
+                    </div>
+                    <div className="px-6 py-5">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-[15px] font-semibold text-[var(--color-text-primary)]">Delete account</p>
+                                <p className="text-[13px] text-[var(--color-text-muted)] mt-0.5">
+                                    Your data will be permanently removed.
+                                </p>
+                            </div>
+                            <a
+                                href="mailto:contact@bloodrelay.org?subject=Delete%20my%20account"
+                                className="btn-danger shrink-0 h-9 px-4 text-[13px]"
+                            >
+                                Request deletion
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
             </main>
+            <BottomNav />
         </div>
     );
 }

@@ -3,91 +3,154 @@
 import { useUser } from "@clerk/nextjs";
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { RequestService } from "@/services/request.service";
-import { DonorService } from "@/services/donor.service";
+import { getProfileAction, getResponsesForDonorAction, submitDonorResponseAction } from "@/app/actions/donor.actions";
+import { getActiveRequestsAction } from "@/app/actions/request.actions";
+import { getRecentActivitiesAction, logActivityAction } from "@/app/actions/activity.actions";
+
 import {
-    AlertCircle, Droplet, MapPin, Clock, Heart, Activity,
-    TrendingUp, Plus, Settings, CheckCircle2, Zap, ShieldCheck,
-    LayoutGrid, List, AlertTriangle
+    Droplet, MapPin, Settings, AlertTriangle,
+    Plus, CheckCircle2, Activity, Heart,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Badge } from '@/components/ui/Badge';
-import { AlertService } from '@/services/alert.service';
-import { DonorAvailabilityToggle } from "@/components/DonorAvailabilityToggle";
-import { NotificationBell } from "@/components/NotificationBell";
-import { RequestDetailDrawer } from "@/components/RequestDetailDrawer";
+import { AlertService } from "@/services/alert.service";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { RequestDetailDrawer } from "@/components/request/RequestDetailDrawer";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
 import { BentoRequestCard } from "@/components/dashboard/BentoRequestCard";
 import { EmergencyTracker } from "@/components/dashboard/EmergencyTracker";
-import type { BloodRequest, User, DonorResponse } from "@/types";
+import { AvailabilityCard } from "@/components/dashboard/AvailabilityCard";
+import { ImpactCard } from "@/components/dashboard/ImpactCard";
+import { FilterPills, type FilterOption } from "@/components/dashboard/FilterPills";
+import type { BloodRequest, User } from "@/types";
 import { supabaseClient } from "@/lib/supabase/client";
 import { useRealtimeAlerts } from "@/hooks/useRealtimeAlerts";
-import { NotificationPrompt } from "@/components/NotificationPrompt";
+import { NotificationPrompt } from "@/components/notifications/NotificationPrompt";
+import { BottomNav } from "@/components/nav/BottomNav";
+import { staggerContainer, slideUpFade } from "@/lib/motion";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { CommandPalette, useCommandPalette } from "@/components/ui/CommandPalette";
 
-type Tab = "donate" | "mine";
-
-const STATUS_BADGE: Record<string, { bg: string, text: string }> = {
-    CREATED: { bg: "bg-zinc-100", text: "text-zinc-600" },
-    open: { bg: "bg-amber-500/10", text: "text-amber-700" },
-    SEARCHING: { bg: "bg-[var(--color-warn-light)]", text: "text-[var(--color-warn)]" },
-    SEARCHING_FOR_DONORS: { bg: "bg-[var(--color-warn-light)]", text: "text-[var(--color-warn)]" },
-    DONOR_ACCEPTED: { bg: "bg-[var(--color-safe-light)]", text: "text-[var(--color-safe)]" },
-    fulfilled: { bg: "bg-[var(--color-safe-light)]", text: "text-[var(--color-safe)]" },
-    COMPLETED: { bg: "bg-zinc-100", text: "text-zinc-600" },
-    cancelled: { bg: "bg-rose-500/10", text: "text-rose-700" },
-    CANCELLED: { bg: "bg-rose-500/10", text: "text-rose-700" },
+/* ─── Status badge maps ─── */
+const STATUS_BADGE: Record<string, { bg: string; text: string }> = {
+    searching:      { bg: "bg-[#FEF3C7]", text: "text-[#92400E]" },
+    donor_accepted: { bg: "bg-[#DCFCE7]", text: "text-[#15803D]" },
+    fulfilled:      { bg: "bg-[#D1FAE5]", text: "text-[#065F46]" },
+    cancelled:      { bg: "bg-[#F4F4F4]", text: "text-[#525252]" },
+    expired:        { bg: "bg-[#FFF7ED]", text: "text-[#9A3412]" },
 };
 
 const STATUS_LABEL: Record<string, string> = {
-    CREATED: "Created",
-    open: "Looking for donors",
-    SEARCHING: "Emergency: Searching",
-    SEARCHING_FOR_DONORS: "Looking for donors",
-    DONOR_ACCEPTED: "Donor found",
-    fulfilled: "Donor found",
-    COMPLETED: "Completed",
-    cancelled: "Cancelled",
-    CANCELLED: "Cancelled",
+    searching:      "Searching",
+    donor_accepted: "Donor found",
+    fulfilled:      "Fulfilled",
+    cancelled:      "Cancelled",
+    expired:        "Expired",
 };
 
+/* ─── Skeleton ─── */
+function DashboardSkeleton() {
+    const sk = "bg-[#F4F4F4] animate-[skeleton-pulse_1.5s_ease-in-out_infinite]";
+    return (
+        <div className="min-h-[100dvh] bg-[#FCFCFB]">
+            <header
+                className="sticky top-0 z-50 border-b border-[#ECECEC] h-16"
+                style={{ background: "rgba(252,252,251,0.92)" }}
+            />
+            <main className="max-w-[1280px] mx-auto px-6 py-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    {/* Left col skeleton */}
+                    <div className="lg:col-span-8 flex flex-col gap-4">
+                        {/* Small cards row */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[...Array(4)].map((_, i) => (
+                                <div key={i} className={`rounded-[28px] border border-[#ECECEC] p-5 min-h-[104px] ${sk}`} />
+                            ))}
+                        </div>
+                        {/* Board skeleton */}
+                        <div className="bg-white rounded-[28px] border border-[#ECECEC] p-5">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className={`h-4 w-32 rounded-full ${sk}`} />
+                                <div className={`h-5 w-10 rounded-full ${sk}`} />
+                            </div>
+                            <div className="flex gap-2 mb-5">
+                                {[...Array(4)].map((_, i) => (
+                                    <div key={i} className={`h-9 w-20 rounded-full ${sk}`} />
+                                ))}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {[...Array(3)].map((_, i) => (
+                                    <div key={i} className={`rounded-[28px] border border-[#ECECEC] p-5 h-[200px] ${sk}`} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    {/* Activity skeleton */}
+                    <div className="lg:col-span-4">
+                        <div className="bg-white rounded-[28px] border border-[#ECECEC] overflow-hidden">
+                            <div className={`h-14 border-b border-[#ECECEC] ${sk}`} />
+                            <div className="p-2 space-y-0.5">
+                                {[...Array(8)].map((_, i) => (
+                                    <div key={i} className="flex items-center gap-3 p-3">
+                                        <div className={`w-5 h-5 rounded-full ${sk} shrink-0`} />
+                                        <div className={`flex-1 h-3 rounded-full ${sk}`} />
+                                        <div className={`w-12 h-3 rounded-full ${sk} shrink-0`} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    );
+}
+
+/* ─── Helpers ─── */
+function isToday(date: Date): boolean {
+    const now = new Date();
+    return (
+        date.getDate() === now.getDate() &&
+        date.getMonth() === now.getMonth() &&
+        date.getFullYear() === now.getFullYear()
+    );
+}
+
+/* ─── Page ─── */
 export default function DashboardPage() {
     const { user, isLoaded } = useUser();
     const router = useRouter();
-    useRealtimeAlerts(); // Activate listener
+    useRealtimeAlerts();
 
     const [profile, setProfile] = useState<User | null>(null);
     const [allRequests, setAllRequests] = useState<BloodRequest[]>([]);
     const [loading, setLoading] = useState(true);
-    const [tab, setTab] = useState<Tab>("donate");
     const [acceptingId, setAcceptingId] = useState<number | string | null>(null);
     const [acceptedIds, setAcceptedIds] = useState<Set<number | string>>(new Set());
     const [selectedRequestId, setSelectedRequestId] = useState<string | number | null>(null);
-    const [activeFilter, setActiveFilter] = useState<string>("Recent");
+    const [activeFilter, setActiveFilter] = useState<FilterOption>("All");
+    const [boardError, setBoardError] = useState<string | null>(null);
+    const [showMyPosts, setShowMyPosts] = useState(false);
 
     const fetchData = useCallback(async () => {
         if (!user?.id) return;
         try {
-            const [profileData, requestsData] = await Promise.all([
-                DonorService.getProfile(user.id).catch(() => null),
-                RequestService.getActiveRequests().catch(() => []), 
+            const [profileData, requestsData, activitiesData] = await Promise.all([
+                getProfileAction().catch(() => null),
+                getActiveRequestsAction().catch(() => []),
+                getRecentActivitiesAction().catch(() => [])
             ]);
             setProfile(profileData as any);
             setAllRequests(requestsData as any);
-            
+
             if (profileData) {
                 try {
-                    const data = await DonorService.getResponsesForDonor(profileData.id);
-                    setAcceptedIds(new Set(data.map((r: any) => r.request_id)));
-                } catch {
-                    // Ignore
-                }
+                    const data = await getResponsesForDonorAction();
+                    setAcceptedIds(new Set(data.filter((r: any) => r.status !== 'CANCELLED').map((r: any) => r.request_id)));
+                } catch { /* ignore */ }
             }
-        } catch {
-            // Logged silently
-        } finally {
-            setLoading(false);
-        }
+        } catch { /* silent */ }
+        finally { setLoading(false); }
     }, [user?.id]);
 
     useEffect(() => {
@@ -95,365 +158,426 @@ export default function DashboardPage() {
         if (!user) { router.push("/"); return; }
         fetchData();
 
-        // Subscribe to relevant Realtime changes to auto-refresh dashboard
-        const channel = supabaseClient.channel('dashboard_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'blood_requests' }, () => {
-                fetchData();
-            })
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'donor_responses' }, () => {
-                fetchData();
-            })
+        const channel = supabaseClient
+            .channel("dashboard_changes")
+            .on("postgres_changes", { event: "*", schema: "public", table: "blood_requests" }, () => fetchData())
+            .on("postgres_changes", { event: "*", schema: "public", table: "donor_responses" }, () => fetchData())
             .subscribe();
 
-        return () => {
-            supabaseClient.removeChannel(channel);
-        };
+        return () => { supabaseClient.removeChannel(channel); };
     }, [isLoaded, user, fetchData, router]);
 
     const handleAccept = async (requestId: any) => {
         setAcceptingId(requestId);
+        setBoardError(null);
         try {
-            await DonorService.submitDonorResponse(requestId.toString(), profile!.id.toString());
-            
+            await submitDonorResponseAction(requestId.toString(), 'ACCEPTED');
+
             const req = allRequests.find((r: any) => r.id === requestId);
             if (req?.contact_phone) {
                 await AlertService.sendSMS(
                     req.contact_phone,
-                    `BloodReach ALERT: Good news! ${profile?.full_name || 'A donor'} has offered to donate blood for ${req.patient_name || 'your request'}. They may contact you shortly. Please check your dashboard for details.`
+                    `BloodRelay ALERT: ${profile?.full_name || "A donor"} has offered to donate blood for ${req.patient_name || "your request"}. Check your dashboard for details.`
                 );
             }
+
+            await logActivityAction(
+                "donor_accepted",
+                `You offered to donate blood for ${req?.patient_name || "a patient"} at ${req?.hospital_name || "the hospital"}.`,
+                requestId.toString()
+            );
 
             setAcceptedIds((prev) => new Set(prev).add(requestId));
             await fetchData();
         } catch (err: any) {
-            alert(err.message || "We encountered an issue updating this. Please try again.");
+            setBoardError(err.message || "We encountered an issue. Please try again.");
         } finally {
             setAcceptingId(null);
         }
     };
 
-    if (!isLoaded || loading) {
-        return (
-            <div className="min-h-[100dvh] flex items-center justify-center bg-[var(--color-base-50)]">
-                <div className="w-12 h-12 relative flex items-center justify-center">
-                    <div className="absolute inset-0 rounded-full border-2 border-[var(--color-base-200)]" />
-                    <div className="absolute inset-0 rounded-full border-2 border-[var(--color-blood)] border-t-transparent animate-spin" />
-                </div>
-            </div>
-        );
-    }
+    useEffect(() => {
+        if (!loading && profile && profile.profile_completed === false) {
+            router.push("/onboarding");
+        }
+    }, [loading, profile, router]);
 
-    const myRequests = allRequests.filter((r) => r.requester_id === (profile?.id ?? -1));
-    
-    // Show requests that match blood group OR are anonymous emergencies
+    const { open: cmdOpen, setOpen: setCmdOpen } = useCommandPalette();
+
+    if (!isLoaded || loading) return <DashboardSkeleton />;
+
+    /* ─── Derived data ─── */
     const donateRequests = allRequests.filter(
         (r) =>
             r.requester_id !== (profile?.id ?? -1) &&
             (r.blood_group === profile?.blood_group || r.requester_id === null) &&
-            (r.status === "SEARCHING" || r.status === "SEARCHING_FOR_DONORS" || r.status === "CREATED" || r.status === "open" || acceptedIds.has(r.id))
+            (r.status === "searching" || r.status === "donor_accepted" || acceptedIds.has(r.id))
     );
 
-    const filteredDonateRequests = [...donateRequests].sort((a, b) => {
-        if (activeFilter === "Critical") return (a.urgency_level === "IMMEDIATE" ? -1 : 1);
-        if (activeFilter === "Recent") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        return 0; // Default to Recent
-    }).filter(r => {
-        if (activeFilter === "Compatible") return r.blood_group === profile?.blood_group;
-        return true;
-    });
+    const myRequests = allRequests.filter((r) => r.requester_id === (profile?.id ?? -1));
+
+    const filteredRequests = (() => {
+        if (activeFilter === "Emergency")
+            return donateRequests.filter((r) => r.urgency_level === "IMMEDIATE");
+        if (activeFilter === "Today")
+            return donateRequests.filter((r) => isToday(new Date(r.created_at)));
+        if (activeFilter === "Fulfilled")
+            return allRequests.filter((r) => acceptedIds.has(r.id) && r.status === "fulfilled");
+        return donateRequests;
+    })();
+
+    const filterCounts: Partial<Record<FilterOption, number>> = {
+        Emergency: donateRequests.filter((r) => r.urgency_level === "IMMEDIATE").length,
+        Today: donateRequests.filter((r) => isToday(new Date(r.created_at))).length,
+        Fulfilled: allRequests.filter((r) => acceptedIds.has(r.id) && r.status === "fulfilled").length,
+    };
+
+    /* ─── Impact stats ─── */
+    const livesSupported = acceptedIds.size;
+    const successfulDonations = allRequests.filter(
+        (r) => acceptedIds.has(r.id) && r.status === "fulfilled"
+    ).length;
+    const activeNow = allRequests.filter((r) => r.status === "searching").length;
 
     const displayName = user?.firstName ?? user?.username ?? "There";
-
-    const hasEmergency = donateRequests.length > 0;
+    const hasEmergency = donateRequests.some((r) => r.urgency_level === "IMMEDIATE");
 
     return (
-        <div className="min-h-[100dvh] bg-[var(--color-base-50)] font-sans text-[var(--color-base-900)] pb-safe relative">
-            {/* Global Noise is applied via globals.css body::before */}
+        <div className="min-h-[100dvh] bg-[var(--color-bg)] text-[var(--color-text-primary)] pb-24 md:pb-0">
 
-            {/* Nav Header */}
-            <header className="sticky top-0 z-50 bg-[rgba(255,255,255,0.85)] backdrop-blur-[12px] border-b border-[var(--color-base-200)] h-[56px] flex justify-center">
+            <CommandPalette open={cmdOpen} onOpenChange={setCmdOpen} />
+
+            {/* ── Nav ─────────────────────────────────────── */}
+            <header
+                className="sticky top-0 z-50 border-b border-[var(--color-border-subtle)] h-16 flex justify-center"
+                style={{ background: "rgba(252,252,251,0.92)", backdropFilter: "blur(12px)" }}
+            >
                 <nav className="w-full max-w-[1280px] px-6 h-full flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                        <Link href="/" className="flex items-center gap-2 outline-none">
-                            <Droplet className="w-5 h-5 fill-[var(--color-blood)] stroke-[var(--color-blood)]" />
-                            <span className="text-[1.125rem] font-bold tracking-[-0.05em] font-display text-[var(--color-base-900)]">BloodReach</span>
+                    <div className="flex items-center gap-5">
+                        <Link href="/" className="flex items-center gap-2 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] rounded-md">
+                            <Droplet className="w-4 h-4 fill-[var(--color-cta)] stroke-[var(--color-cta)]" />
+                            <span className="text-[15px] font-semibold tracking-tight text-[var(--color-text-primary)]">BloodRelay</span>
                         </Link>
-                        
-                        <div className="hidden md:flex items-center gap-2 bg-[var(--color-base-50)] border border-[var(--color-base-200)] px-3 py-1 rounded-[var(--radius-pill)]">
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[0.75rem] font-mono font-bold text-[var(--color-base-500)] tracking-widest uppercase">Verified Donor Network</span>
+                        <div className="hidden md:flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse" aria-hidden="true" />
+                            <span className="text-[11px] font-medium text-[var(--color-text-muted)]">Donor network active</span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm font-medium">
-                        <Link href="/dashboard" className="text-[var(--color-base-900)] font-bold transition-colors hover:underline">
-                            Dashboard
+                    <div className="flex items-center gap-3">
+                        {/* Search trigger */}
+                        <button
+                            onClick={() => setCmdOpen(true)}
+                            className="hidden md:flex items-center gap-2 h-8 px-3 rounded-[var(--radius-input)] border border-[var(--color-border)] text-[12px] text-[var(--color-text-muted)] hover:border-[var(--color-text-muted)] transition-colors"
+                            aria-label="Open command palette (Ctrl+K)"
+                        >
+                            <span>Search…</span>
+                            <kbd className="text-[10px] font-mono opacity-60">⌘K</kbd>
+                        </button>
+                        <Link
+                            href="/activity"
+                            className="hidden md:block text-[13px] text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors font-medium"
+                        >
+                            Activity
                         </Link>
+                        <NotificationBell />
                         <Link
                             href="/request/wizard"
-                            className="flex items-center gap-1.5 px-4 py-1.5 bg-[var(--color-blood)] text-white rounded-[var(--radius-pill)] text-sm font-bold shadow-[var(--shadow-clay-hard)] hover:-translate-y-px transition-transform"
+                            className="h-9 px-4 bg-[var(--color-cta)] text-white text-[13px] font-medium rounded-[var(--radius-button)] flex items-center gap-1.5 hover:bg-[var(--color-cta-hover)] transition-colors"
                         >
-                            <AlertTriangle className={`w-4 h-4 ${hasEmergency ? 'animate-pulse' : ''}`} />
+                            <AlertTriangle className={`w-3.5 h-3.5 ${hasEmergency ? "animate-pulse" : ""}`} aria-hidden="true" />
                             Emergency
                         </Link>
-                        <div className="relative group flex items-center justify-center">
-                            <div className="w-[32px] h-[32px] rounded-full overflow-hidden border-[2px] border-[var(--color-blood)] cursor-pointer">
-                                {/* The Clerk UserButton will be inside here */}
-                                <Settings className="w-4 h-4 m-auto mt-1" />
-                            </div>
-                        </div>
+                        <Link
+                            href="/settings"
+                            className="w-8 h-8 rounded-full border border-[var(--color-border)] flex items-center justify-center hover:border-[var(--color-cta)] transition-colors"
+                            aria-label="Settings"
+                        >
+                            <Settings className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
+                        </Link>
                     </div>
                 </nav>
             </header>
 
-            <main className="max-w-[1280px] mx-auto px-6 py-8">
-                {/* STRICT 12-COLUMN BENTO GRID */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:grid-rows-[auto_auto_auto]">
-                    
-                    {/* Emergency Banner (Conditional) */}
+            <main className="max-w-[1280px] mx-auto px-6 py-6">
+
+                {/* ── Emergency banner ─────────────────────── */}
+                <AnimatePresence>
                     {hasEmergency && (
-                        <div className="lg:col-[1/-1] h-[56px] bg-[var(--color-blood)] text-white sticky top-[56px] z-40 flex items-center gap-3 px-6 rounded-[var(--radius-card)] shadow-[var(--shadow-clay-hard)] mb-4">
-                            <span className="w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
-                            <span className="font-mono text-sm uppercase tracking-wider font-bold">
-                                NEW EMERGENCY REQUEST — {donateRequests[0]?.blood_group} needed at {donateRequests[0]?.hospital_name}
+                        <motion.div
+                            initial={{ opacity: 0, y: -8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.25 }}
+                            className="flex items-center gap-3 px-5 py-3 text-white rounded-[var(--radius-card)] mb-5"
+                            style={{ background: "var(--color-cta)" }}
+                            role="alert"
+                            aria-live="polite"
+                        >
+                            <span className="w-2 h-2 rounded-full bg-white animate-pulse shrink-0" aria-hidden="true" />
+                            <span className="text-[13px] font-medium truncate">
+                                {donateRequests.find((r) => r.urgency_level === "IMMEDIATE")?.blood_group} needed urgently — someone nearby needs help
                             </span>
-                        </div>
+                        </motion.div>
                     )}
+                </AnimatePresence>
 
-                    {/* ROW 1: Identity Panel (4 cols) + Live Feed Feed (8 cols) */}
-                    
-                    {/* User Profile Card */}
-                    <div className="lg:col-[1/5] lg:row-start-1 bg-white rounded-[var(--radius-card)] shadow-[var(--shadow-clay)] p-6 min-h-[200px] flex flex-col justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-[64px] h-[64px] rounded-full border-[3px] border-[var(--color-blood)] shadow-[0_2px_0_var(--color-blood)] flex items-center justify-center text-white font-display font-bold text-[28px]" style={{ background: 'linear-gradient(135deg, var(--color-blood-light), var(--color-blood))' }}>
-                                {displayName[0]}
-                            </div>
-                            <div>
+                {/* ── Bento Grid ───────────────────────────── */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+                    {/* ── Left column: 8/12 ──────────────────── */}
+                    <div className="lg:col-span-8 flex flex-col gap-4">
+
+                        {/* ── Row 1: Availability + Impact Cards ── */}
+                        <motion.div
+                            variants={staggerContainer}
+                            initial="hidden"
+                            animate="visible"
+                            className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                        >
+                            <AvailabilityCard
+                                profile={profile}
+                                onToggle={fetchData}
+                            />
+                            <ImpactCard
+                                label="Lives Supported"
+                                value={livesSupported}
+                                icon={Heart}
+                            />
+                            <ImpactCard
+                                label="Donations Made"
+                                value={successfulDonations}
+                                icon={CheckCircle2}
+                            />
+                            <ImpactCard
+                                label="Active Requests"
+                                value={activeNow}
+                                icon={Activity}
+                            />
+                        </motion.div>
+
+                        {/* ── Row 2: Emergency Board (dominant) ── */}
+                        <motion.div
+                            variants={slideUpFade}
+                            initial="hidden"
+                            animate="visible"
+                            className="card-base p-5 flex flex-col gap-4"
+                        >
+                            {/* Board error */}
+                            <AnimatePresence>
+                                {boardError && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: -4 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -4 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="px-4 py-3 rounded-[var(--radius-input)] flex items-center justify-between gap-3"
+                                        style={{ background: "var(--color-danger-light)", border: "1px solid rgba(220,38,38,0.15)" }}
+                                    >
+                                        <p className="text-[13px] font-medium" style={{ color: "var(--color-danger)" }}>{boardError}</p>
+                                        <button
+                                            onClick={() => setBoardError(null)}
+                                            className="shrink-0 text-lg leading-none transition-opacity hover:opacity-70"
+                                            style={{ color: "var(--color-danger)" }}
+                                            aria-label="Dismiss error"
+                                        >
+                                            ×
+                                        </button>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Board header */}
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                                <div>
+                                    <h2 className="text-[15px] font-semibold text-[#1E1E1E]">Emergency Board</h2>
+                                    <p className="text-xs text-[#737373] mt-0.5">
+                                        {profile?.blood_group
+                                            ? `Showing ${profile.blood_group} compatible requests`
+                                            : "Live requests near you"}
+                                    </p>
+                                </div>
+
                                 <div className="flex items-center gap-2">
-                                    <h2 className="font-display font-bold text-[1.25rem] text-[var(--color-base-900)]">
-                                        {displayName}
-                                    </h2>
-                                    <span className="bg-[var(--color-warn-light)] text-[var(--color-warn)] font-mono text-[0.875rem] rounded-[8px] px-[10px] py-[2px] font-bold">
-                                        {profile?.blood_group ?? "N/A"}
-                                    </span>
-                                </div>
-                                <div className="mt-1 flex items-center gap-1.5 bg-[var(--color-safe-light)] text-[var(--color-safe)] rounded-[var(--radius-pill)] px-[10px] py-[2px] w-fit">
-                                    <span className="w-2 h-2 rounded-full bg-[var(--color-safe)] animate-pulse" />
-                                    <span className="text-[0.75rem] font-bold uppercase tracking-widest">{profile?.is_available_donor ? 'Active' : 'Unavailable'}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <Link href="/settings" className="mt-6 block text-center bg-transparent border-[1.5px] border-[var(--color-base-200)] text-[var(--color-base-700)] rounded-[var(--radius-pill)] py-2 text-[0.875rem] font-medium hover:border-[var(--color-blood)] hover:text-[var(--color-blood)] transition-colors">
-                            View Profile
-                        </Link>
-                    </div>
-
-                    {/* Live Feed Card */}
-                    <div className="lg:col-[5/13] lg:row-start-1">
-                        <ActivityTimeline />
-                    </div>
-
-                    {/* ROW 2: Availability (4 cols) + Impact (4 cols) + Community (4 cols) */}
-
-                    {/* Availability Card */}
-                    <div className="lg:col-[1/5] lg:row-start-2 bg-white rounded-[var(--radius-card)] shadow-[var(--shadow-clay)] p-6 min-h-[200px] flex flex-col justify-center border-t-[8px] border-[var(--color-safe)] relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-5">
-                            <ShieldCheck className="w-32 h-32" />
-                        </div>
-                        <div className="flex flex-col relative z-10 h-full justify-between">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-display font-bold text-[1.125rem] text-[var(--color-base-900)]">Donor Status</h3>
-                                {profile && (
-                                    <div className="scale-90 origin-right">
-                                        <DonorAvailabilityToggle
-                                            initialAvailable={profile.is_available_donor ?? false}
-                                            onToggle={() => fetchData()}
-                                        />
+                                    <div
+                                        className="flex items-center gap-1.5 text-[10px] rounded-full px-2.5 py-1 font-semibold uppercase tracking-wider shrink-0"
+                                        style={{ background: "var(--color-success-light)", color: "#065F46" }}
+                                    >
+                                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)] animate-pulse" aria-hidden="true" />
+                                        Live
                                     </div>
-                                )}
-                            </div>
-                            <div>
-                                {profile?.is_available_donor ? (
-                                    <p className="font-sans text-[0.875rem] text-[var(--color-base-500)]">Active: You'll be notified of urgent {profile?.blood_group || 'blood'} requests within 20km.</p>
-                                ) : (
-                                    <p className="font-sans text-[0.875rem] text-[var(--color-warn)] font-medium">Invisible Mode: You won't receive new requests until you re-activate.</p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {/* ROW 3: Active Requests Feed (12 cols) */}
-                    <div className="lg:col-[5/13] lg:row-start-2 lg:row-span-2 bg-white rounded-[var(--radius-card)] shadow-[var(--shadow-clay)] p-6">
-                        {/* Feed Header */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-6 border-b border-[var(--color-base-200)] pb-4">
-                            <div className="space-y-1">
-                                <h2 className="font-display font-bold text-[1.5rem] tracking-tight text-[var(--color-base-900)]">
-                                    Emergency Board
-                                </h2>
+                                    <button
+                                        onClick={() => setShowMyPosts((v) => !v)}
+                                        className="px-3.5 py-1.5 text-[13px] font-semibold rounded-full transition-colors shrink-0"
+                                        style={
+                                            showMyPosts
+                                                ? { background: "var(--color-text-primary)", color: "#fff" }
+                                                : { background: "var(--color-base-100)", color: "var(--color-text-muted)" }
+                                        }
+                                    >
+                                        My Posts
+                                        {myRequests.length > 0 && (
+                                            <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-[#D63A3A] text-[9px] text-white font-bold align-middle">
+                                                {myRequests.length}
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
 
-                            <div className="flex gap-4 border-b border-[var(--color-base-200)] w-full sm:w-auto">
-                                <button
-                                    onClick={() => setTab("donate")}
-                                    className={`relative pb-2 text-sm font-bold transition-all ${tab === "donate" ? "text-[var(--color-base-900)] border-b-2 border-[var(--color-blood)]" : "text-[var(--color-base-500)] hover:text-[var(--color-base-900)] border-b-2 border-transparent"}`}
-                                >
-                                    Live Feed
-                                    {donateRequests.length > 0 && (
-                                        <span className="ml-2 inline-flex items-center justify-center px-1.5 py-0.5 rounded-[4px] bg-[var(--color-blood-light)] text-[10px] text-[var(--color-blood)] font-mono">
-                                            {donateRequests.length}
-                                        </span>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => setTab("mine")}
-                                    className={`relative pb-2 text-sm font-bold transition-all ${tab === "mine" ? "text-[var(--color-base-900)] border-b-2 border-[var(--color-blood)]" : "text-[var(--color-base-500)] hover:text-[var(--color-base-900)] border-b-2 border-transparent"}`}
-                                >
-                                    My Posts
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Request Grid */}
-                        <AnimatePresence mode="wait">
-                            {tab === "donate" ? (
-                                <motion.div key="donate" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                    {/* FILTER BAR */}
-                                    {profile?.is_available_donor && donateRequests.length > 0 && (
-                                        <div className="flex flex-wrap items-center gap-2 mb-6">
-                                            {['Critical', 'Nearby', 'Compatible', 'Recent'].map((filter) => (
-                                                <button 
-                                                    key={filter} 
-                                                    onClick={() => setActiveFilter(filter)}
-                                                    className={`px-4 py-1.5 rounded-[var(--radius-pill)] text-[0.75rem] font-bold font-mono tracking-widest uppercase transition-colors ${activeFilter === filter ? 'bg-[var(--color-blood-light)] text-[var(--color-blood)] border border-[var(--color-blood)]' : 'bg-[var(--color-base-50)] text-[var(--color-base-500)] border border-[var(--color-base-200)] hover:border-[var(--color-base-500)]'}`}
-                                                >
-                                                    {filter}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {!profile?.blood_group ? (
-                                        <div className="p-12 text-center border border-dashed border-[var(--color-base-200)] rounded-[var(--radius-card)] bg-[var(--color-base-50)]">
-                                            <div className="w-[64px] h-[64px] rounded-full bg-white flex items-center justify-center mx-auto mb-6 shadow-sm border border-[var(--color-base-200)]">
-                                                <Settings className="w-8 h-8 text-[var(--color-base-500)]" />
-                                            </div>
-                                            <h3 className="font-display font-bold text-[1.25rem] text-[var(--color-base-900)] mb-2">Blood Group Not Set</h3>
-                                            <p className="text-[var(--color-base-500)] text-[0.9375rem] max-w-xs mx-auto mb-8">We need your blood group to show you relevant requests near you.</p>
-                                            <Link href="/onboarding" className="inline-block bg-[var(--color-blood)] text-white px-8 py-3 rounded-[var(--radius-pill)] font-bold shadow-[var(--shadow-clay-hard)] hover:-translate-y-px transition-transform">
-                                                Set Up Profile
-                                            </Link>
-                                        </div>
-                                    ) : !profile.is_available_donor ? (
-                                        <div className="p-12 text-center border border-dashed border-[var(--color-base-200)] rounded-[var(--radius-card)] bg-[var(--color-base-50)]">
-                                            <div className="w-[64px] h-[64px] rounded-full bg-white flex items-center justify-center mx-auto mb-6 shadow-sm border border-[var(--color-base-200)]">
-                                                <ShieldCheck className="w-8 h-8 text-[var(--color-base-500)]" />
-                                            </div>
-                                            <h3 className="font-display font-bold text-[1.25rem] text-[var(--color-base-900)] mb-2">Availability Paused</h3>
-                                            <p className="text-[var(--color-base-500)] text-[0.9375rem] max-w-xs mx-auto">Toggle availability above to start receiving matching requests.</p>
-                                        </div>
-                                    ) : donateRequests.length === 0 ? (
-                                        <div className="p-12 text-center border-[1.5px] border-[var(--color-safe-light)] rounded-[var(--radius-card)] bg-[var(--color-safe-light)]">
-                                            <div className="w-[64px] h-[64px] rounded-full bg-white flex items-center justify-center mx-auto mb-6 shadow-sm">
-                                                <CheckCircle2 className="w-8 h-8 text-[var(--color-safe)]" />
-                                            </div>
-                                            <h3 className="font-display font-bold text-[1.25rem] text-[var(--color-base-900)] mb-2">You're all caught up!</h3>
-                                            <p className="text-[var(--color-base-500)] text-[0.9375rem] max-w-xs mx-auto">No urgent {profile.blood_group} requests right now. We'll alert you if something changes.</p>
-                                        </div>
-                                    ) : filteredDonateRequests.length === 0 ? (
-                                        <div className="p-12 text-center border-[1.5px] border-[var(--color-base-200)] rounded-[var(--radius-card)] bg-white shadow-sm">
-                                            <h3 className="font-display font-bold text-[1.25rem] text-[var(--color-base-900)] mb-2">No matches found</h3>
-                                            <p className="text-[var(--color-base-500)] text-[0.9375rem] max-w-xs mx-auto">Try changing your filter. No requests match "{activeFilter}".</p>
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {filteredDonateRequests.map((req) => (
-                                                <BentoRequestCard
-                                                    key={req.id}
-                                                    request={req}
-                                                    onClick={() => setSelectedRequestId(req.id)}
-                                                    onAccept={() => handleAccept(req.id)}
-                                                    isAccepting={acceptingId === req.id}
-                                                    isAccepted={acceptedIds.has(req.id)}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </motion.div>
-                            ) : (
-                                <motion.div key="mine" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                                    {myRequests.length === 0 ? (
-                                        <div className="p-12 text-center border border-dashed border-[var(--color-base-200)] rounded-[var(--radius-card)] bg-[var(--color-base-50)]">
-                                            <div className="w-[64px] h-[64px] rounded-full bg-white flex items-center justify-center mx-auto mb-6 shadow-sm border border-[var(--color-base-200)]">
-                                                <Plus className="w-8 h-8 text-[var(--color-base-500)]" />
-                                            </div>
-                                            <h3 className="font-display font-bold text-[1.25rem] text-[var(--color-base-900)] mb-2">No Posts Yet</h3>
-                                            <p className="text-[var(--color-base-500)] text-[0.9375rem] max-w-xs mx-auto mb-8">Need blood for someone? Create a request to reach donors instantly.</p>
-                                            <Link href="/request/wizard" className="inline-block bg-[var(--color-blood)] text-white px-8 py-3 rounded-[var(--radius-pill)] font-bold shadow-[var(--shadow-clay-hard)] hover:-translate-y-px transition-transform">
-                                                Create Request
-                                            </Link>
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-8">
-                                            {/* Show Emergency Tracker for the first active request */}
-                                            {myRequests[0].status === "SEARCHING" || myRequests[0].status === "SEARCHING_FOR_DONORS" ? (
-                                                <div className="mb-8">
-                                                    <EmergencyTracker 
-                                                        request={myRequests[0]} 
-                                                        responses={(myRequests[0] as any).donor_responses || []} 
-                                                        isRequester={true} 
+                            <AnimatePresence mode="wait">
+                                {showMyPosts ? (
+                                    /* ── My Posts view ─── */
+                                    <motion.div
+                                        key="mine"
+                                        initial={{ opacity: 0, y: 6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -6 }}
+                                        transition={{ duration: 0.15 }}
+                                    >
+                                        {myRequests.length === 0 ? (
+                                            <EmptyState
+                                                title="No requests yet"
+                                                message="Need blood for someone? Create a request to reach nearby donors instantly."
+                                                action={{ label: "Create request", href: "/request/wizard" }}
+                                            />
+                                        ) : (
+                                            <div className="space-y-6">
+                                                {myRequests[0].status === "searching" && (
+                                                    <EmergencyTracker
+                                                        request={myRequests[0]}
+                                                        responses={(myRequests[0] as any).donor_responses || []}
+                                                        isRequester={true}
                                                     />
+                                                )}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                    {myRequests.map((req) => {
+                                                        return (
+                                                            <motion.div
+                                                                key={req.id}
+                                                                layout
+                                                                onClick={() => setSelectedRequestId(req.id)}
+                                                                className="card-interactive cursor-pointer p-5"
+                                                            >
+                                                                <div className="flex items-start justify-between mb-4">
+                                                                    <span className={`badge ${
+                                                                        req.status === "donor_accepted" ? "badge-accepted" :
+                                                                        req.status === "fulfilled" ? "badge-fulfilled" :
+                                                                        req.status === "cancelled" ? "badge-cancelled" :
+                                                                        req.status === "expired" ? "badge-expired" : "badge-searching"
+                                                                    }`}>
+                                                                        {STATUS_LABEL[req.status] ?? req.status}
+                                                                    </span>
+                                                                    <div
+                                                                        className="w-9 h-9 rounded-2xl flex items-center justify-center font-bold font-metric text-[var(--color-cta)] text-sm border border-[var(--color-border)]"
+                                                                        style={{ background: "rgba(214,58,58,0.07)" }}
+                                                                    >
+                                                                        {req.blood_group}
+                                                                    </div>
+                                                                </div>
+                                                                <h3 className="text-[15px] font-semibold text-[var(--color-text-primary)] truncate mb-1.5">
+                                                                    {req.patient_name}
+                                                                </h3>
+                                                                <div className="flex items-center gap-1.5 text-[var(--color-text-muted)] text-xs">
+                                                                    <MapPin className="w-3 h-3 shrink-0" aria-hidden="true" />
+                                                                    <span className="truncate">{req.hospital_name}</span>
+                                                                </div>
+                                                            </motion.div>
+                                                        );
+                                                    })}
                                                 </div>
-                                            ) : null}
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                {myRequests.map((req) => {
-                                                    const statusStyle = STATUS_BADGE[req.status] ?? STATUS_BADGE["CREATED"];
-                                                    const statusLabel = STATUS_LABEL[req.status] ?? "Unknown";
-                                                    
-                                                    return (
-                                                        <motion.div
-                                                            key={req.id}
-                                                            layout
-                                                            onClick={() => setSelectedRequestId(req.id)}
-                                                            className="bg-white border-[1.5px] border-[var(--color-base-200)] rounded-[var(--radius-card)] p-6 shadow-[var(--shadow-clay)] cursor-pointer hover:border-[var(--color-blood)] transition-colors"
-                                                        >
-                                                            <div className="flex items-start justify-between mb-6">
-                                                                <div className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest ${statusStyle.bg} ${statusStyle.text}`}>
-                                                                    {statusLabel}
-                                                                </div>
-                                                                <div className="w-[40px] h-[40px] rounded-[12px] bg-[var(--color-base-50)] flex items-center justify-center font-bold font-mono text-[var(--color-blood)] border border-[var(--color-base-200)]">
-                                                                    {req.blood_group}
-                                                                </div>
-                                                            </div>
-                                                            <h3 className="font-display font-bold text-[1.125rem] text-[var(--color-base-900)] tracking-tight mb-2 truncate">
-                                                                {req.patient_name}
-                                                            </h3>
-                                                            <div className="flex items-center gap-2 text-[var(--color-base-500)] text-[0.875rem] font-medium font-sans">
-                                                                <MapPin className="w-3 h-3" />
-                                                                {req.hospital_name}
-                                                            </div>
-                                                        </motion.div>
-                                                    )
-                                                })}
                                             </div>
-                                        </div>
-                                    )}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                                        )}
+                                    </motion.div>
+                                ) : (
+                                    /* ── Live Feed view ─── */
+                                    <motion.div
+                                        key="donate"
+                                        initial={{ opacity: 0, y: 6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: -6 }}
+                                        transition={{ duration: 0.15 }}
+                                        className="flex flex-col gap-4"
+                                    >
+                                        {/* Filter Pills */}
+                                        {profile?.is_available_donor && (
+                                            <FilterPills
+                                                active={activeFilter}
+                                                onChange={setActiveFilter}
+                                                counts={filterCounts}
+                                            />
+                                        )}
+
+                                        {/* Request cards / empty states */}
+                                        {!profile?.blood_group ? (
+                                            <EmptyState
+                                                title="Blood group not set"
+                                                message="We need your blood group to find relevant requests near you."
+                                                action={{ label: "Set up profile", href: "/onboarding" }}
+                                            />
+                                        ) : !profile.is_available_donor ? (
+                                            <EmptyState
+                                                title="You're taking a break"
+                                                message="Toggle availability above whenever you're ready — we'll match you with requests right away."
+                                            />
+                                        ) : filteredRequests.length === 0 ? (
+                                            activeFilter === "Fulfilled" ? (
+                                                <EmptyState
+                                                    title="No fulfilled donations yet"
+                                                    message="Once you help with a request and it's marked complete, it appears here."
+                                                    className="bg-[var(--color-success-light)] rounded-[var(--radius-card)]"
+                                                />
+                                            ) : donateRequests.length === 0 ? (
+                                                <EmptyState
+                                                    title="You're all caught up"
+                                                    message={`No urgent ${profile.blood_group} requests right now. We'll alert you the moment something comes in.`}
+                                                    className="bg-[var(--color-success-light)] rounded-[var(--radius-card)]"
+                                                />
+                                            ) : (
+                                                <EmptyState
+                                                    title="No matches for this filter"
+                                                    message={`No requests match "${activeFilter}" right now. Try a different filter.`}
+                                                />
+                                            )
+                                        ) : (
+                                            <motion.div
+                                                variants={staggerContainer}
+                                                initial="hidden"
+                                                animate="visible"
+                                                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                                            >
+                                                {filteredRequests.map((req) => (
+                                                    <BentoRequestCard
+                                                        key={req.id}
+                                                        request={req}
+                                                        onClick={() => setSelectedRequestId(req.id)}
+                                                        onAccept={() => handleAccept(req.id)}
+                                                        isAccepting={acceptingId === req.id}
+                                                        isAccepted={acceptedIds.has(req.id)}
+                                                    />
+                                                ))}
+                                            </motion.div>
+                                        )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
                     </div>
 
+                    {/* ── Right column: Activity Stream 4/12 ─── */}
+                    <div className="lg:col-span-4">
+                        <ActivityTimeline limit={30} />
+                    </div>
                 </div>
             </main>
 
-            {/* Request Detail Drawer */}
             <RequestDetailDrawer
                 requestId={selectedRequestId}
                 onClose={() => setSelectedRequestId(null)}
                 onActionComplete={() => { fetchData(); setSelectedRequestId(null); }}
             />
-
             <NotificationPrompt />
+            <BottomNav />
         </div>
     );
 }

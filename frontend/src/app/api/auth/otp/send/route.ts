@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseServer } from '@/lib/supabase/server';
-import { TelegramService } from '@/services/telegram.service';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(req: NextRequest) {
     try {
@@ -10,36 +9,19 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid phone number' }, { status: 400 });
         }
 
-        // Generate 6-digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min TTL
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
 
-        // Store OTP in Supabase (upsert per phone)
-        const { error } = await (supabaseServer as any)
-            .from('otp_verifications')
-            .upsert({
-                phone,
-                otp_code: otp,
-                expires_at: expiresAt,
-                verified: false
-            }, { onConflict: 'phone' });
+        const { error } = await supabase.auth.signInWithOtp({ phone });
 
         if (error) {
             console.error('[OTP Send Error]', error);
-            return NextResponse.json({ error: 'Failed to store OTP' }, { status: 500 });
+            return NextResponse.json({ error: error.message }, { status: 500 });
         }
 
-        // Send OTP via Telegram (since it's our free messaging provider)
-        await TelegramService.sendMessage(
-            `🔐 *BloodReach Verification Code*\n\nYour OTP is: *${otp}*\n\n_Valid for 10 minutes. Do not share this code._`
-        );
-
-        // In production: send to user's Telegram DM via their chat_id
-        // For now, broadcasts to the admin channel. 
-        // When you have per-user Telegram chat IDs, pass them here.
-        console.log(`[OTP] ${phone} → ${otp}`);
-
-        return NextResponse.json({ success: true, message: 'OTP sent via Telegram' });
+        return NextResponse.json({ success: true, message: 'OTP sent' });
     } catch (err: any) {
         console.error('[OTP Send Error]', err);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -4,7 +4,6 @@ import { useEffect, useCallback } from 'react';
 import { subscribeToChannel, unsubscribeFromChannel } from '@/lib/supabase/realtime';
 import { useUser } from '@clerk/nextjs';
 import { useProfile } from '@/context/AuthContext';
-// import { toast } from 'react-hot-toast'; // Assuming hot-toast is used, will check. Actually BloodReach uses custom toast or sonner. Let's stick to standard alert or console.log for now, and native Notification API.
 
 export function useRealtimeAlerts() {
     const { user } = useUser();
@@ -40,7 +39,7 @@ export function useRealtimeAlerts() {
                 new Notification(title, { 
                     body, 
                     icon: '/favicon.ico',
-                    tag: 'bloodreach-alert',
+                    tag: 'bloodrelay-alert',
                     renotify: true,
                     silent: !isImmediate
                 } as any);
@@ -102,7 +101,7 @@ export function useRealtimeAlerts() {
                     const metadata = log.metadata || {};
                     
                     triggerNotification(
-                        metadata.title || 'BloodReach Alert',
+                        metadata.title || 'BloodRelay Alert',
                         metadata.body || 'New update regarding a blood request.',
                         metadata.urgency === 'HIGH' || metadata.isImmediate === true
                     );

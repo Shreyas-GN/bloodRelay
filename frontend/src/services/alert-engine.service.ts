@@ -79,6 +79,22 @@ export class AlertEngineService {
         console.error("Failed to insert notification logs", error);
     }
 
+    // Insert in-app inbox notifications
+    const inAppRows = eligibleDonors.map(donor => ({
+        user_id: donor.id,
+        request_id: request.id as string,
+        title: 'Urgent: Blood Needed Nearby 🩸',
+        message: `${request.units} units of ${request.blood_group} requested at ${request.hospital_name}`,
+        type: 'emergency_request',
+        status: 'unread',
+    }));
+    const { error: notifError } = await (supabaseServer as any)
+        .from('notifications')
+        .insert(inAppRows);
+    if (notifError) {
+        console.error("Failed to insert in-app notifications (phase 1)", notifError);
+    }
+
     // Update request stats
     const newCount = (request.notified_count || 0) + donors.length;
     await (supabaseServer as any)
@@ -146,6 +162,22 @@ export class AlertEngineService {
       }));
 
       await (supabaseServer as any).from('notification_logs').insert(logs);
+
+      // Insert in-app inbox notifications
+      const inAppRows2 = eligibleDonors.map((donor: any) => ({
+          user_id: donor.id,
+          request_id: request.id as string,
+          title: 'Urgent: Expanded Search 🩸',
+          message: `${request.units} units of ${request.blood_group} needed further away at ${request.hospital_name}`,
+          type: 'emergency_request',
+          status: 'unread',
+      }));
+      const { error: notifError2 } = await (supabaseServer as any)
+          .from('notifications')
+          .insert(inAppRows2);
+      if (notifError2) {
+          console.error("Failed to insert in-app notifications (phase 2)", notifError2);
+      }
 
       // Trigger Push
       try {
@@ -229,6 +261,22 @@ export class AlertEngineService {
 
         await (supabaseServer as any).from('notification_logs').insert(logs);
 
+        // Insert in-app inbox notifications for phase 3 donors
+        const inAppRows3 = eligibleDonors.map((donor: any) => ({
+            user_id: donor.id,
+            request_id: request.id as string,
+            title: '🚨 Critical: Blood Urgently Needed',
+            message: `${request.blood_group} blood critically needed at ${request.hospital_name}. Please respond immediately.`,
+            type: 'emergency_request',
+            status: 'unread',
+        }));
+        const { error: notifError3 } = await (supabaseServer as any)
+            .from('notifications')
+            .insert(inAppRows3);
+        if (notifError3) {
+            console.error("Failed to insert in-app notifications (phase 3)", notifError3);
+        }
+
         // Trigger SMS
         try {
             for (const donor of eligibleDonors) {
@@ -238,7 +286,7 @@ export class AlertEngineService {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             to: donor.phone,
-                            message: `URGENT: Blood required at ${request.hospital_name}. Respond on BloodReach.`
+                            message: `URGENT: Blood required at ${request.hospital_name}. Respond on BloodRelay.`
                         })
                     });
                 }

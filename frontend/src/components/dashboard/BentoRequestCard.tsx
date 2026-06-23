@@ -12,94 +12,104 @@ interface BentoRequestCardProps {
     isAccepted: boolean;
 }
 
-const URGENCY_STYLES: Record<string, { bg: string, text: string, label: string }> = {
-    IMMEDIATE: { bg: "bg-rose-500", text: "text-white", label: "Critical" },
-    TODAY: { bg: "bg-amber-500", text: "text-zinc-950", label: "Today" },
-    SCHEDULED: { bg: "bg-blue-500", text: "text-white", label: "Scheduled" },
+/* V2 urgency — pill badges, no solid color blobs */
+const URGENCY_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+    IMMEDIATE: { bg: "bg-[#FEE2E2]", text: "text-[#991B1B]", label: "Critical" },
+    TODAY:     { bg: "bg-[#FEF3C7]", text: "text-[#92400E]", label: "Today" },
+    SCHEDULED: { bg: "bg-[#F4F4F4]", text: "text-[#525252]",  label: "Scheduled" },
 };
 
 export function BentoRequestCard({ request, onClick, onAccept, isAccepting, isAccepted }: BentoRequestCardProps) {
-    const urgency = URGENCY_STYLES[request.urgency_level ?? ""] ?? { bg: "bg-zinc-100", text: "text-zinc-900", label: "Standard" };
+    const urgency = URGENCY_STYLES[request.urgency_level ?? ""] ?? {
+        bg: "bg-[#F4F4F4]",
+        text: "text-[#525252]",
+        label: "Standard",
+    };
 
     return (
         <motion.article
             layout
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bento-item group cursor-pointer"
+            transition={{ duration: 0.15 }}
+            className="group cursor-pointer"
             onClick={onClick}
-            aria-label={`Emergency blood request for ${request.blood_group} at ${request.hospital_name}`}
+            aria-label={`Blood request for ${request.blood_group} at ${request.hospital_name}`}
         >
-            <div className="clay-card clay-card-hover p-6 h-full flex flex-col">
-                <div className="flex items-start justify-between mb-6">
-                    <div className="flex flex-col gap-1">
-                        <span className={`w-fit px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-widest ${urgency.bg} ${urgency.text}`}>
+            <div className="bg-white border border-[#ECECEC] rounded-[28px] shadow-[0_8px_30px_rgba(0,0,0,0.05)] p-5 h-full flex flex-col transition-colors hover:border-[#D63A3A]">
+
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
+                    <div className="flex flex-col gap-1.5">
+                        <span className={`w-fit px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${urgency.bg} ${urgency.text}`}>
                             {urgency.label}
                         </span>
-                        <h3 className="font-extrabold text-xl tracking-tighter text-zinc-900 dark:text-white leading-none mt-1">
+                        <h3 className="text-[15px] font-semibold text-[#1E1E1E] leading-tight">
                             {request.patient_name}
                         </h3>
-                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
-                            {request.requester_name || "Anonymous"} • {request.metadata?.relation || "Unspecified"}
-                        </p>
                     </div>
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-50 dark:bg-zinc-800/50 flex items-center justify-center border border-zinc-100 dark:border-zinc-800">
-                        <span className="text-lg font-black font-mono text-crimson">{request.blood_group}</span>
+                    <div className="w-10 h-10 rounded-2xl bg-[#F4F4F4] flex items-center justify-center border border-[#ECECEC] shrink-0 ml-3">
+                        <span className="text-sm font-bold font-mono text-[#D63A3A]">{request.blood_group}</span>
                     </div>
                 </div>
 
-                <div className="space-y-4 flex-1">
-                    <div className="flex items-start gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-white/5 flex items-center justify-center shrink-0">
-                            <MapPin className="w-4 h-4 text-zinc-400" />
-                        </div>
-                        <div className="overflow-hidden">
-                            <p className="text-xs font-bold text-zinc-900 dark:text-white truncate tracking-tight">{request.hospital_name}</p>
-                            <p className="text-[10px] text-zinc-500 font-medium">{request.city}</p>
+                {/* Details */}
+                <div className="space-y-2.5 flex-1">
+                    <div className="flex items-center gap-2">
+                        <MapPin className="w-3.5 h-3.5 text-[#9CA3AF] shrink-0" />
+                        <div className="min-w-0">
+                            <p className="text-xs font-semibold text-[#1E1E1E] truncate">{request.hospital_name}</p>
+                            <p className="text-[11px] text-[#737373]">{request.city}</p>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 flex flex-col justify-between">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Droplet className="w-3 h-3 text-crimson" />
-                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Units</span>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="p-2.5 rounded-2xl bg-[#FCFCFB] border border-[#ECECEC]">
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <Droplet className="w-3 h-3 text-[#D63A3A]" />
+                                <span className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Units</span>
                             </div>
-                            <p className="text-sm font-black font-mono text-zinc-900 dark:text-white">{request.units}</p>
+                            <p className="text-sm font-bold font-mono text-[#1E1E1E]">{request.units}</p>
                         </div>
-                        <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 flex flex-col justify-between">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Clock className="w-3 h-3 text-zinc-400" />
-                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Phase {request.escalation_phase || 1}</span>
+                        <div className="p-2.5 rounded-2xl bg-[#FCFCFB] border border-[#ECECEC]">
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <Clock className="w-3 h-3 text-[#9CA3AF]" />
+                                <span className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wide">Phase {request.escalation_phase || 1}</span>
                             </div>
-                            <p className="text-[11px] font-bold text-zinc-900 dark:text-white">
-                                {request.confirmed_count || 0} / {request.notified_count || 0} Responded
+                            <p className="text-[11px] font-semibold text-[#1E1E1E]">
+                                {request.confirmed_count || 0}/{request.notified_count || 0} responded
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-zinc-100 dark:border-white/5">
+                {/* Action */}
+                <div className="mt-4 pt-4 border-t border-[#ECECEC]">
                     {isAccepted ? (
                         <div className="flex items-center justify-between gap-3">
-                            <div className="flex-1">
-                                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">You are helping</p>
-                                <a href={`tel:${request.contact_phone}`} onClick={(e) => e.stopPropagation()} className="text-xs font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                                    <Phone className="w-3 h-3" /> {request.contact_phone}
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[11px] font-semibold text-[#15803D] mb-1 uppercase tracking-wide">You are helping</p>
+                                <a
+                                    href={`tel:${request.contact_phone}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="text-xs font-semibold text-[#1E1E1E] flex items-center gap-1.5"
+                                >
+                                    <Phone className="w-3 h-3" />
+                                    {request.contact_phone}
                                 </a>
                             </div>
-                            <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center">
-                                <ChevronRight className="w-4 h-4 text-emerald-600" />
+                            <div className="w-7 h-7 rounded-full bg-[#DCFCE7] flex items-center justify-center shrink-0">
+                                <ChevronRight className="w-3.5 h-3.5 text-[#15803D]" />
                             </div>
                         </div>
                     ) : (
                         <button
                             onClick={(e) => { e.stopPropagation(); onAccept(e); }}
                             disabled={isAccepting}
-                            className="w-full py-3.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-black text-sm tracking-tight clay-button-hover shadow-clay flex items-center justify-center gap-2 disabled:opacity-50"
+                            className="w-full h-9 bg-[#1E1E1E] text-white rounded-[18px] text-[13px] font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2a2a2a] transition-colors active:scale-[0.98]"
                         >
                             {isAccepting ? (
-                                <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                                <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                             ) : (
                                 "I can help"
                             )}

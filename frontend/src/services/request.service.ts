@@ -182,8 +182,8 @@ export class RequestService {
     const thresholdDate = new Date(Date.now() - hoursThreshold * 60 * 60 * 1000).toISOString()
     const { error } = await db
       .from('blood_requests')
-      .update({ status: 'EXPIRED' })
-      .eq('status', 'SEARCHING')
+      .update({ status: 'expired' })
+      .eq('status', 'searching')
       .lte('created_at', thresholdDate)
 
     if (error) {

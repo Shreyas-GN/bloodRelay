@@ -15,7 +15,8 @@ class MatchingEngineClient:
             "latitude": latitude,
             "longitude": longitude,
             "hospital_name": blood_request.hospital_name,
-            "units_required": blood_request.units_required
+            "units_required": blood_request.units,
+            "request_id": str(blood_request.id),
         }
         
         try:
