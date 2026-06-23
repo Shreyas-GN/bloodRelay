@@ -2,12 +2,8 @@
   command = "npm run build"
   publish = ".next"
 
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-
 [build.environment]
   NODE_VERSION = "20"
-  NEXT_PRIVATE_LOCAL_WEBPACK = "true"
 
 # No manual redirects needed for Next.js on Netlify 
 # as the plugin handles them automatically for App Router.
