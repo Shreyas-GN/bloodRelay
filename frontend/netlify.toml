@@ -1,12 +1,8 @@
 [build]
   command = "npm run build"
-  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
-
-# No manual redirects needed for Next.js on Netlify 
-# as the plugin handles them automatically for App Router.
 
 [[headers]]
   for = "/*"
