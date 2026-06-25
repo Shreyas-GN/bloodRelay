@@ -77,6 +77,9 @@ export default function OnboardingPage() {
                 longitude: lng ?? null,
                 location: locationPoint ?? null,
             });
+            // Reload the Clerk session so the JWT picks up onboardingComplete: true
+            // before the middleware checks it on the /dashboard request.
+            await user.reload();
             await refetch();
             router.push('/dashboard');
         } catch (err) {

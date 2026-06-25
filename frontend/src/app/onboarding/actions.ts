@@ -35,15 +35,23 @@ export async function saveOnboardingProfile(data: {
         .upsert({ id: userId, ...profileData });
 
     if (error) {
-        throw new Error(`Failed to update profile: ${error.message}`);
+        console.error('[onboarding] Supabase upsert failed:', error);
+        throw new Error(`Failed to save profile: ${error.message}`);
     }
 
-    const client = await clerkClient();
-    await client.users.updateUserMetadata(userId, {
-        publicMetadata: { onboardingComplete: true },
-    });
+    try {
+        const client = await clerkClient();
+        await client.users.updateUserMetadata(userId, {
+            publicMetadata: { onboardingComplete: true },
+        });
+    } catch (clerkError) {
+        console.error('[onboarding] Clerk metadata update failed:', clerkError);
+        throw new Error('Profile saved but session update failed. Please refresh and try again.');
+    }
 
-    await ActivityService.log(userId, 'profile_completed', 'Completed donor profile setup.', null, supabaseServer as any);
+    await ActivityService.log(userId, 'profile_completed', 'Completed donor profile setup.', null, supabaseServer as any).catch((e: unknown) => {
+        console.warn('[onboarding] Activity log failed (non-fatal):', e);
+    });
 
     return { success: true };
 }
