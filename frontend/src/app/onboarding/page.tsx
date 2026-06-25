@@ -81,6 +81,8 @@ export default function OnboardingPage() {
             // before the middleware checks it on the /dashboard request.
             await user.reload();
             await refetch();
+            // Flush the Next.js client-side router cache so /dashboard is fetched fresh.
+            router.refresh();
             router.push('/dashboard');
         } catch (err) {
             console.error("Error saving profile:", err);

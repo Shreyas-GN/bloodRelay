@@ -1,6 +1,7 @@
 "use server";
 
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { revalidatePath } from 'next/cache';
 import { supabaseServer } from '@/lib/supabase/server';
 import { ActivityService } from '@/services/activity.service';
 
@@ -52,6 +53,10 @@ export async function saveOnboardingProfile(data: {
     await ActivityService.log(userId, 'profile_completed', 'Completed donor profile setup.', null, supabaseServer as any).catch((e: unknown) => {
         console.warn('[onboarding] Activity log failed (non-fatal):', e);
     });
+
+    revalidatePath('/');
+    revalidatePath('/onboarding');
+    revalidatePath('/dashboard');
 
     return { success: true };
 }
