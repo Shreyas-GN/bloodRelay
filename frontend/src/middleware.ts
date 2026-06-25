@@ -14,9 +14,20 @@ const isPublicRoute = createRouteMatcher([
   "/api/alerts/(.*)"
 ]);
 
+const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
+
 const clerkDefault = clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect();
+  if (isPublicRoute(req)) return;
+
+  const { userId, sessionClaims } = await auth.protect();
+
+  // Let users who haven't completed onboarding reach /onboarding
+  if (isOnboardingRoute(req)) return;
+
+  // Redirect authenticated users who haven't finished onboarding
+  const onboardingComplete = (sessionClaims?.metadata as { onboardingComplete?: boolean } | undefined)?.onboardingComplete;
+  if (!onboardingComplete) {
+    return NextResponse.redirect(new URL("/onboarding", req.url));
   }
 });
 

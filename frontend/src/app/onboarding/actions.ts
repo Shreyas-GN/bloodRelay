@@ -1,6 +1,6 @@
 "use server";
 
-import { auth } from '@clerk/nextjs/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { supabaseServer } from '@/lib/supabase/server';
 import { ActivityService } from '@/services/activity.service';
 
@@ -38,7 +38,12 @@ export async function saveOnboardingProfile(data: {
         throw new Error(`Failed to update profile: ${error.message}`);
     }
 
+    const client = await clerkClient();
+    await client.users.updateUserMetadata(userId, {
+        publicMetadata: { onboardingComplete: true },
+    });
+
     await ActivityService.log(userId, 'profile_completed', 'Completed donor profile setup.', null, supabaseServer as any);
-    
+
     return { success: true };
 }
