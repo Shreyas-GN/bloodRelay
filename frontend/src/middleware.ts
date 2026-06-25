@@ -24,8 +24,13 @@ const clerkDefault = clerkMiddleware(async (auth, req) => {
   // Let users who haven't completed onboarding reach /onboarding
   if (isOnboardingRoute(req)) return;
 
-  // Redirect authenticated users who haven't finished onboarding
-  const onboardingComplete = (sessionClaims?.metadata as { onboardingComplete?: boolean } | undefined)?.onboardingComplete;
+  // Redirect authenticated users who haven't finished onboarding.
+  // Check both:
+  //   1. The JWT claim (authoritative once the token rotates, up to ~60 s lag)
+  //   2. The bridge cookie set immediately by the server action to cover that gap
+  const jwtComplete = (sessionClaims?.metadata as { onboardingComplete?: boolean } | undefined)?.onboardingComplete;
+  const cookieComplete = req.cookies.get('onboarding_complete')?.value === '1';
+  const onboardingComplete = jwtComplete || cookieComplete;
   if (!onboardingComplete) {
     return NextResponse.redirect(new URL("/onboarding", req.url));
   }

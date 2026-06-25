@@ -2,6 +2,7 @@
 
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 import { supabaseServer } from '@/lib/supabase/server';
 import { ActivityService } from '@/services/activity.service';
 
@@ -15,7 +16,10 @@ export async function saveOnboardingProfile(data: {
     location: string | null;
     full_name: string;
 }) {
+    console.log('[onboarding:action] ▶ saveOnboardingProfile called', { userId: 'resolving...' });
+
     const { userId } = await auth();
+    console.log('[onboarding:action] Auth resolved → userId:', userId);
     if (!userId) throw new Error("Unauthorized");
 
     const profileData = {
@@ -31,32 +35,52 @@ export async function saveOnboardingProfile(data: {
         location: data.location,
     };
 
-    const { error } = await (supabaseServer as any)
-        .from('profiles')
-        .upsert({ id: userId, ...profileData });
+    console.log('[onboarding:action] Attempting Supabase upsert for userId:', userId, profileData);
 
-    if (error) {
-        console.error('[onboarding] Supabase upsert failed:', error);
-        throw new Error(`Failed to save profile: ${error.message}`);
+    const { error: upsertError } = await (supabaseServer as any)
+        .from('profiles')
+        .upsert({ id: userId, ...profileData }, { onConflict: 'id' });
+
+    if (upsertError) {
+        console.error('[onboarding:action] ✖ Supabase upsert failed:', JSON.stringify(upsertError, null, 2));
+        throw new Error(`Failed to save profile: ${upsertError.message}`);
     }
 
+    console.log('[onboarding:action] ✔ Supabase upsert succeeded');
+
     try {
+        console.log('[onboarding:action] Updating Clerk publicMetadata → onboardingComplete: true');
         const client = await clerkClient();
         await client.users.updateUserMetadata(userId, {
             publicMetadata: { onboardingComplete: true },
         });
+        console.log('[onboarding:action] ✔ Clerk metadata updated');
     } catch (clerkError) {
-        console.error('[onboarding] Clerk metadata update failed:', clerkError);
+        console.error('[onboarding:action] ✖ Clerk metadata update failed:', clerkError);
         throw new Error('Profile saved but session update failed. Please refresh and try again.');
     }
 
+    // Bridge cookie: the browser's JWT won't have the new `onboardingComplete` claim
+    // until Clerk re-issues it (up to 60 s). This cookie lets the middleware pass
+    // the user through immediately, bridging that gap.
+    const cookieStore = await cookies();
+    cookieStore.set('onboarding_complete', '1', {
+        maxAge: 300, // 5 minutes — well past the 60 s JWT TTL
+        path: '/',
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+    });
+    console.log('[onboarding:action] ✔ Bridge cookie set (onboarding_complete=1)');
+
     await ActivityService.log(userId, 'profile_completed', 'Completed donor profile setup.', null, supabaseServer as any).catch((e: unknown) => {
-        console.warn('[onboarding] Activity log failed (non-fatal):', e);
+        console.warn('[onboarding:action] Activity log failed (non-fatal):', e);
     });
 
     revalidatePath('/');
     revalidatePath('/onboarding');
     revalidatePath('/dashboard');
 
+    console.log('[onboarding:action] ✔ saveOnboardingProfile complete');
     return { success: true };
 }

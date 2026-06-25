@@ -47,7 +47,12 @@ export default function OnboardingPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!user?.id) return;
+        console.log('[onboarding:page] ▶ handleSubmit fired', { userId: user?.id, formData });
+
+        if (!user?.id) {
+            console.warn('[onboarding:page] No user id — aborting');
+            return;
+        }
         setLoading(true);
         setError(null);
         try {
@@ -56,16 +61,20 @@ export default function OnboardingPage() {
             let locationPoint = null;
 
             if (!lat || !lng) {
+                console.log('[onboarding:page] No coords in form — attempting GPS');
                 try {
                     const pos = await getCurrentPosition();
                     lat = pos.coords.latitude;
                     lng = pos.coords.longitude;
-                } catch {
-                    // Proceed without GPS
+                    console.log('[onboarding:page] GPS resolved:', { lat, lng });
+                } catch (gpsErr) {
+                    console.warn('[onboarding:page] GPS failed (non-fatal):', gpsErr);
                 }
             }
             if (lat && lng) locationPoint = `POINT(${lng} ${lat})`;
+            console.log('[onboarding:page] locationPoint:', locationPoint);
 
+            console.log('[onboarding:page] Calling saveOnboardingProfile...');
             const { saveOnboardingProfile } = await import('./actions');
             await saveOnboardingProfile({
                 full_name: user.fullName || 'Anonymous User',
@@ -77,15 +86,27 @@ export default function OnboardingPage() {
                 longitude: lng ?? null,
                 location: locationPoint ?? null,
             });
-            // Reload the Clerk session so the JWT picks up onboardingComplete: true
-            // before the middleware checks it on the /dashboard request.
+            console.log('[onboarding:page] ✔ saveOnboardingProfile resolved');
+
+            // Reload the Clerk user object so publicMetadata is fresh in the browser.
+            console.log('[onboarding:page] Calling user.reload()...');
             await user.reload();
+            console.log('[onboarding:page] ✔ user.reload() done. publicMetadata:', user.publicMetadata);
+
+            // Refresh the profile context.
+            console.log('[onboarding:page] Calling refetch()...');
             await refetch();
-            // Flush the Next.js client-side router cache so /dashboard is fetched fresh.
-            router.refresh();
-            router.push('/dashboard');
+            console.log('[onboarding:page] ✔ refetch() done');
+
+            // Use a full-page navigation instead of router.push.
+            // router.push is a client-side transition that reuses the existing browser
+            // JWT cookie; that cookie has stale claims (~60 s lag after updateUserMetadata).
+            // The server action already set an `onboarding_complete` bridge cookie so
+            // the middleware will pass this request through immediately.
+            console.log('[onboarding:page] Navigating to /dashboard via window.location...');
+            window.location.href = '/dashboard';
         } catch (err) {
-            console.error("Error saving profile:", err);
+            console.error('[onboarding:page] ✖ Error in handleSubmit:', err);
             setError("We couldn't save your profile. Please try again.");
         } finally {
             setLoading(false);
