@@ -1,7 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-
 const isPublicRoute = createRouteMatcher([
   "/",
   "/sign-in(.*)",
@@ -11,40 +10,43 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks/clerk",
   "/api/ai/parse-request",
   "/api/auth/(.*)",
-  "/api/alerts/(.*)"
+  "/api/alerts/(.*)",
 ]);
 
 const isOnboardingRoute = createRouteMatcher(["/onboarding(.*)"]);
 
-const clerkDefault = clerkMiddleware(async (auth, req) => {
-  if (isPublicRoute(req)) return;
+export default clerkMiddleware(async (auth, req) => {
+  try {
+    if (isPublicRoute(req)) return NextResponse.next();
 
-  const { userId, sessionClaims } = await auth.protect();
+    const { sessionClaims } = await auth.protect();
 
-  // Let users who haven't completed onboarding reach /onboarding
-  if (isOnboardingRoute(req)) return;
+    // Let users who haven't completed onboarding reach /onboarding
+    if (isOnboardingRoute(req)) return NextResponse.next();
 
-  // Redirect authenticated users who haven't finished onboarding.
-  // Check both:
-  //   1. The JWT claim (authoritative once the token rotates, up to ~60 s lag)
-  //   2. The bridge cookie set immediately by the server action to cover that gap
-  const jwtComplete = (sessionClaims?.metadata as { onboardingComplete?: boolean } | undefined)?.onboardingComplete;
-  const cookieComplete = req.cookies.get('onboarding_complete')?.value === '1';
-  const onboardingComplete = jwtComplete || cookieComplete;
-  if (!onboardingComplete) {
-    return NextResponse.redirect(new URL("/onboarding", req.url));
+    // Check both the JWT claim (authoritative once token rotates, up to ~60s lag)
+    // and the bridge cookie set immediately by the server action to cover that gap.
+    const jwtComplete = (sessionClaims?.metadata as { onboardingComplete?: boolean } | undefined)
+      ?.onboardingComplete;
+    const cookieComplete = req.cookies.get("onboarding_complete")?.value === "1";
+
+    if (!jwtComplete && !cookieComplete) {
+      return NextResponse.redirect(new URL("/onboarding", req.url));
+    }
+
+    return NextResponse.next();
+  } catch (err) {
+    console.error("[middleware] Unhandled error — falling through:", err);
+    return NextResponse.next();
   }
 });
 
-export default async function middleware(req: any, event: any) {
-  return clerkDefault(req, event);
-}
-
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
-    '/(api|trpc)(.*)',
+    // Skip _next internals, static assets, and common file extensions.
+    // The negative lookahead order matters: check path prefixes before extension globs.
+    "/((?!_next/static|_next/image|_next/webpack-hmr|favicon\\.ico|.*\\.(?:svg|png|jpe?g|gif|webp|ico|css|js|woff2?|ttf|eot|csv|docx?|xlsx?|zip|webmanifest)).*)",
+    // Always run for API and trpc routes (catches routes that might match the extension glob above)
+    "/(api|trpc)(.*)",
   ],
 };
