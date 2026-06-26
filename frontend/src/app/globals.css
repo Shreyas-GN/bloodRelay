@@ -11,12 +11,12 @@
 
 @theme {
   /* ── Font Stacks ────────────────────────────────────────────
-     font-sans  → Inter (body text, minimum 16px)
+     font-sans  → Space Grotesk (body text, minimum 16px)
      font-display → Geist (headings only)
      font-mono  → Space Mono (metrics: blood groups, distances,
                   timers, IDs, radius values — nothing else)
   ── */
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-sans: var(--font-space), system-ui, sans-serif;
   --font-display: var(--font-geist-sans), system-ui, sans-serif;
   --font-mono: var(--font-space-mono), monospace;
 
@@ -93,12 +93,12 @@
   --color-surface-zinc-hover: #3F3F46;
 
   /* ── Font Variables ─────────────────────────────────────────
-     --font-body   → Inter (registered in layout.tsx as --font-inter)
+     --font-body   → Space Grotesk (registered in layout.tsx as --font-space)
      --font-display → Geist Sans (headings)
      --font-metric → Space Mono (blood groups, numbers, IDs)
   ── */
   --font-display: var(--font-geist-sans), system-ui, sans-serif;
-  --font-body: var(--font-inter), var(--font-geist-sans), system-ui, sans-serif;
+  --font-body: var(--font-space), var(--font-geist-sans), system-ui, sans-serif;
   --font-metric: var(--font-space-mono), monospace;
 
   /* ── Motion Tokens ──────────────────────────────────────────

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter, Space_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Space_Grotesk, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from '@clerk/nextjs';
 import { AuthProvider } from '@/context/AuthContext';
@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
   display: "swap",
 });
 
-const inter = Inter({
-  variable: "--font-inter",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space",
   subsets: ["latin"],
   display: "swap",
 });
@@ -102,7 +102,7 @@ export default function RootLayout({
           colorBackground: '#FCFCFB',
           colorText: '#18181B',
           colorDanger: '#DC2626',
-          fontFamily: 'var(--font-inter), var(--font-geist-sans), sans-serif',
+          fontFamily: 'var(--font-space), var(--font-geist-sans), sans-serif',
           borderRadius: '16px'
         },
         elements: {
@@ -121,7 +121,7 @@ export default function RootLayout({
           />
         </head>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${spaceMono.variable} antialiased`}
+          className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${spaceMono.variable} antialiased`}
         >
           <AuthProvider>
             {children}
