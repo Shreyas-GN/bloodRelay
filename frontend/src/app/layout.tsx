@@ -112,7 +112,7 @@ export default function RootLayout({
         }
       }}
     >
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${spaceMono.variable}`}>
         <head>
           <script
             type="application/ld+json"
@@ -120,9 +120,7 @@ export default function RootLayout({
             suppressHydrationWarning
           />
         </head>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${spaceMono.variable} antialiased`}
-        >
+        <body className="antialiased">
           <AuthProvider>
             {children}
           </AuthProvider>

@@ -160,6 +160,7 @@
   }
 
   body {
+    font-family: var(--font-body);
     background-color: var(--color-bg);
     color: var(--color-text-primary);
     @apply antialiased;
@@ -219,7 +220,7 @@
     line-height: 1.2;
   }
 
-  /* Body — default reading text, Inter 400 */
+  /* Body — default reading text, Space Grotesk 400 */
   .font-body {
     font-family: var(--font-body);
     font-weight: 400;
@@ -227,7 +228,7 @@
     font-size: 1rem;
   }
 
-  /* Body LG — critical areas, Inter 400 18px */
+  /* Body LG — critical areas, Space Grotesk 400 18px */
   .font-body-lg {
     font-family: var(--font-body);
     font-weight: 400;
@@ -235,7 +236,7 @@
     line-height: 1.6;
   }
 
-  /* Caption — secondary info, Inter 400 14px */
+  /* Caption — secondary info, Space Grotesk 400 14px */
   .font-caption {
     font-family: var(--font-body);
     font-weight: 400;
